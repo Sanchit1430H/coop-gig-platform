@@ -1,0 +1,6 @@
+node_modules/
+coop_gig.db
+coop_gig.db-shm
+coop_gig.db-wal
+server.log
+.env
