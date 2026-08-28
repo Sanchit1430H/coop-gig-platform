@@ -1,0 +1,105 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; background: #fff; }
+.capitalize { text-transform: capitalize; }
+.site { overflow-x: hidden; background: #fff; }
+
+/* Topbar */
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 4%; background: #0a1128; color: #fff;
+}
+.brand-mark { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.topnav { display: flex; align-items: center; gap: 24px; font-size: 13px; font-weight: 500; }
+.topnav a { color: #cbd5e1; text-decoration: none; }
+.topnav a:hover { color: #fff; }
+.account-link { border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 20px; }
+.nav-btn-orange { background: #f97316; color: #fff; border: none; padding: 10px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; }
+
+/* Hero Section with Image Background */
+/* Hero Section with Image Background */
+.hero-section {
+  position: relative;
+  height: 480px;
+  background-image: url('https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=1920&q=80');
+  background-size: cover;
+  background-position: center 20%; /* Adjusted to keep the worker's body in frame */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff;
+}
+.hero-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  /* Slightly lighter gradient so the worker is clearly visible */
+  background: linear-gradient(to bottom, rgba(10,17,40,0.5) 0%, rgba(10,17,40,0.75) 75%, #fff 100%);
+}
+.hero-content {
+  position: relative; z-index: 2; max-width: 800px; width: 100%; padding: 0 20px;
+  margin-top: -30px;
+}
+.hero-content h1 { font-size: 42px; font-weight: 800; margin-bottom: 12px; }
+.hero-content p { font-size: 16px; color: #cbd5e1; margin-bottom: 36px; }
+
+/* The Search Bar */
+.search-bar {
+  display: flex; align-items: center; background: #fff; border-radius: 50px;
+  padding: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 100%; max-width: 750px; margin: 0 auto;
+}
+.search-input-group {
+  display: flex; align-items: center; flex: 1; padding: 0 16px; color: #64748b;
+}
+.search-input-group select, .search-input-group input {
+  border: none; outline: none; background: transparent; width: 100%; font-size: 14px; color: #1f2937; padding-left: 8px;
+}
+.search-divider { width: 1px; height: 30px; background: #e2e8f0; }
+.search-btn {
+  background: #f97316; color: #fff; border: none; padding: 14px 32px;
+  border-radius: 50px; font-weight: 700; cursor: pointer; font-size: 15px;
+}
+
+/* Feature Cards (Overlapping Hero) */
+.feature-cards-container {
+  position: relative; z-index: 3; display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px; max-width: 1200px; margin: -50px auto 40px; padding: 0 20px;
+}
+.feature-card-img {
+  background: #fff; border-radius: 16px; padding: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; text-align: left;
+}
+.card-illustration { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; margin-bottom: 16px; }
+.feature-card-img h3 { font-size: 17px; color: #0a1128; margin-bottom: 12px; font-weight: 700;}
+.sub-text { font-size: 12px; color: #64748b; line-height: 1.5; }
+
+/* 100% Pay Bar for Card 1 */
+.pay-bar-container { width: 100%; background: #f1f5f9; height: 6px; border-radius: 4px; margin-bottom: 6px; }
+.pay-bar-fill { width: 100%; height: 100%; background: #f97316; border-radius: 4px; }
+.pay-bar-text { font-size: 11px; color: #f97316; font-weight: 700; display: block; margin-bottom: 12px; }
+
+/* Bottom 3 Columns Layout */
+.bottom-three-columns {
+  display: grid; grid-template-columns: 1.1fr 1.2fr 1fr; gap: 30px; max-width: 1200px; margin: 0 auto; padding: 20px 20px 80px;
+}
+.column-section h4 { font-size: 16px; color: #0a1128; margin-bottom: 24px; text-align: center; }
+
+/* Mini Categories Grid (Left Column) */
+.mini-category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.mini-category-chip { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);}
+.mini-icon { font-size: 24px; margin-bottom: 6px; }
+.mini-name { font-size: 10px; font-weight: 600; color: #334155; }
+
+/* Mini Steps (Middle Column) */
+.mini-steps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.mini-step-card { text-align: center; }
+.mini-step-img { background: #f8fafc; border: 1px solid #e2e8f0; height: 70px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; }
+.mini-step-text strong { font-size: 12px; color: #0a1128; display: block; margin-bottom: 4px;}
+.mini-step-text p { font-size: 11px; color: #64748b; line-height: 1.4;}
+
+/* Footer */
+.dark-footer { background: #0a1128; color: #94a3b8; text-align: center; padding: 40px; font-size: 13px; }
+
+/* Chat widget fixes for new layout */
+.chat-fab { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: #f97316; color: #fff; border: none; font-size: 22px; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 1000; }
+.chat-window { position: fixed; bottom: 92px; right: 24px; width: 320px; max-height: 460px; background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; z-index: 1000; border: 1px solid #e2e8f0; }
+.chat-header { background: #0a1128; color: #fff; padding: 14px 16px; }
