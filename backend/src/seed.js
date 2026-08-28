@@ -1,3 +1,4 @@
+console.log("Starting seed script on Render...");
 /**
  * Seed script — populates the DB with realistic demo data so the app
  * doesn't look empty during development or in front of judges.
