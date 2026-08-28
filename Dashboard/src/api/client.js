@@ -2,7 +2,7 @@
 // LAN IP if the dashboard needs to be viewed from another device on the
 // same network during the demo. localhost is fine when both the backend
 // and this dashboard run on the same machine (the normal case).
-export const API_BASE = 'http://10.139.213.195:4000/api';
+export const API_BASE = 'https://seva-api-1uco.onrender.com/api';
 
 async function request(path, { method = 'GET', token, body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
