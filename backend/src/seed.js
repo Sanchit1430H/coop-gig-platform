@@ -5,11 +5,7 @@
  * Safe to re-run: wipes and recreates all tables first.
  */
 const bcrypt = require('bcryptjs');
-const Database = require('better-sqlite3');
-const path = require('path');
-
-const dbPath = path.join(__dirname, '..', 'coop_gig.db');
-const db = new Database(dbPath);
+const db = require('./db');
 db.pragma('foreign_keys = OFF');
 
 // Wipe existing data
