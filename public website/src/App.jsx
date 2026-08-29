@@ -3,6 +3,23 @@ import ChatWidget from './components/ChatWidget';
 import { api } from './api/client';
 import './styles.css';
 
+// --- NEW REAL MAP IMPORTS ---
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// --- CUSTOM MAP ICONS (Tied to real coordinates) ---
+const createIcon = (emoji, color) => L.divIcon({
+  html: `<div style="font-size: 20px; background: white; border-radius: 50%; border: 3px solid ${color}; box-shadow: 0 4px 6px rgba(0,0,0,0.3); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">${emoji}</div>`,
+  className: 'custom-map-icon',
+  iconSize: [36, 36],
+  iconAnchor: [18, 18],
+  popupAnchor: [0, -18]
+});
+
+const customerIcon = createIcon('📍', '#ef4444'); // Red for Customer
+const activeWorkerIcon = createIcon('🚗', '#22c55e'); // Green for Assigned Worker
+const idleWorkerIcon = createIcon('👷', '#94a3b8'); // Gray for other available workers
+
 const CATEGORY_ICONS = {
   plumber: '🔧', electrician: '⚡', carpenter: '🪚', mason: '🧱',
   cleaner: '🧹', painting: '🎨', house: '🏠', pest: '🐛', handyman: '🛠️'
@@ -42,9 +59,44 @@ const Testimonials = () => {
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
   const [isEmergency, setIsEmergency] = useState(false);
-  
-  // NEW: Memory for which service the user clicked!
   const [selectedService, setSelectedService] = useState('plumber');
+
+  // --- GPS COORDINATES FOR BHUBANESWAR ---
+  const customerGPS = [20.2960, 85.8245]; // Destination
+  const workerStartGPS = [20.3150, 85.8050]; // Worker starting point
+  const [workerPos, setWorkerPos] = useState(workerStartGPS);
+
+  // Fake "nearby" workers to make the map look populated and real
+  const availableWorkers = [
+    [20.3010, 85.8300],
+    [20.2850, 85.8150],
+    [20.2920, 85.8400],
+    [20.3050, 85.8100]
+  ];
+
+  // --- MATHEMATICAL DRIVING SIMULATION ---
+  // This updates the GPS coordinates smoothly so the car actually moves across the map
+  useEffect(() => {
+    let interval;
+    if (currentView === 'tracking') {
+      setWorkerPos(workerStartGPS); // Reset to start
+      interval = setInterval(() => {
+        setWorkerPos((prev) => {
+          const latDiff = customerGPS[0] - prev[0];
+          const lngDiff = customerGPS[1] - prev[1];
+          
+          // If the worker has reached the customer, stop the interval
+          if (Math.abs(latDiff) < 0.0002 && Math.abs(lngDiff) < 0.0002) {
+            clearInterval(interval);
+            return prev;
+          }
+          // Move 2% of the remaining distance every 500ms
+          return [prev[0] + (latDiff * 0.02), prev[1] + (lngDiff * 0.02)];
+        });
+      }, 500); 
+    }
+    return () => clearInterval(interval);
+  }, [currentView]);
 
   // --- PAGE 1: HOME PAGE ---
   const renderHome = () => (
@@ -58,11 +110,7 @@ export default function App() {
           <div className="search-bar bubble-effect" style={{animationDelay: '0.4s'}}>
             <div className="search-input-group">
               <span className="search-icon">🔍</span>
-              {/* Dropdown updates our memory */}
-              <select 
-                value={selectedService} 
-                onChange={(e) => setSelectedService(e.target.value)}
-              >
+              <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
                 {Object.keys(CATEGORY_ICONS).map(name => (
                   <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
                 ))}
@@ -78,7 +126,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* Feature cards omitted for brevity, but they stay exactly the same */}
       <section className="feature-cards-container">
         <div className="feature-card-img bubble-effect">
           <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=400&q=80" alt="Cooperative Team" className="card-illustration" />
@@ -104,15 +151,7 @@ export default function App() {
           <h4>Featured Service Category</h4>
           <div className="mini-category-grid">
             {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
-              <div 
-                key={name} 
-                className="mini-category-chip bubble-effect" 
-                onClick={() => {
-                  // NEW: When they click a chip, remember the name AND switch pages
-                  setSelectedService(name);
-                  setCurrentView('booking');
-                }}
-              >
+              <div key={name} className="mini-category-chip bubble-effect" onClick={() => { setSelectedService(name); setCurrentView('booking'); }}>
                 <span className="mini-icon">{icon}</span>
                 <span className="mini-name capitalize">{name}</span>
               </div>
@@ -149,12 +188,7 @@ export default function App() {
         
         <div className="form-group">
           <label>Service Required</label>
-          {/* NEW: Automatically shows the service they clicked on the home page! */}
-          <select 
-            className="form-input capitalize" 
-            value={selectedService}
-            onChange={(e) => setSelectedService(e.target.value)}
-          >
+          <select className="form-input capitalize" value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
             {Object.keys(CATEGORY_ICONS).map(name => (
               <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
             ))}
@@ -197,7 +231,7 @@ export default function App() {
     </div>
   );
 
-  // --- PAGE 3: LIVE TRACKING & CHAT ---
+  // --- PAGE 3: LIVE TRACKING (NOW WITH REAL LEAFLET MAPS) ---
   const renderTracking = () => (
     <div className="tracking-page-container fade-in">
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Cancel & Return Home</button>
@@ -209,23 +243,37 @@ export default function App() {
             <p>{isEmergency ? "Worker is arriving in 5 mins." : "Worker will arrive at scheduled time."}</p>
           </div>
           
-          <div className="map-container">
-           <iframe 
-  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d119743.53374950663!2d85.73693241517409!3d20.2998637784013!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a1909d2d5170aa5%3A0xfc580e2b68b33fa8!2sBhubaneswar%2C%20Odisha!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
-  className="map-image"
-  style={{ border: 0 }} 
-  allowFullScreen="" 
-  loading="lazy">
-</iframe>
-            <div className="worker-dot"></div>
-            <div className="customer-dot"></div>
+          {/* REAL MAP COMPONENT */}
+          <div className="map-container" style={{ height: '350px', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '20px', zIndex: 1 }}>
+            <MapContainer center={customerGPS} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap'
+              />
+              
+              {/* You (The Customer) */}
+              <Marker position={customerGPS} icon={customerIcon}>
+                <Popup>Your Location</Popup>
+              </Marker>
+
+              {/* The Moving Worker */}
+              <Marker position={workerPos} icon={activeWorkerIcon}>
+                <Popup>Ramesh (Assigned to you)</Popup>
+              </Marker>
+
+              {/* Other Available Workers in the Area */}
+              {availableWorkers.map((pos, idx) => (
+                <Marker key={idx} position={pos} icon={idleWorkerIcon}>
+                  <Popup>Available Worker</Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
 
           <div className="worker-profile-card">
             <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Worker" className="worker-avatar" />
             <div className="worker-details">
               <h4>Ramesh Kumar</h4>
-              {/* NEW: Displays the service they booked dynamically */}
               <p className="capitalize">⭐ 4.9 (120 Jobs) • Verified {selectedService}</p>
               <span className="coop-badge">Cooperative Member (100% Payout)</span>
             </div>
@@ -236,7 +284,7 @@ export default function App() {
           <div className="chat-interface">
             <div className="chat-header-small">Live Chat with Ramesh</div>
             <div className="chat-body">
-              <div className="chat-msg system-msg">System: AI Matched you with Ramesh based on real-time location.</div>
+              <div className="chat-msg system-msg">System: Found {availableWorkers.length + 1} nearby workers. AI Matched you with Ramesh based on real-time location.</div>
               {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Ramesh is dropping current tasks to reach you.</div>}
               <div className="chat-msg worker-msg">
                 <strong>Ramesh:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am driving fast, reaching in 5 mins!" : "I will reach your location at the booked time."}
