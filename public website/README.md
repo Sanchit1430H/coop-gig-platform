@@ -1,4 +1,4 @@
-# Seva-E-Akramikta — Public Website
+# Kushal-Setu — Public Website
 
 Public marketing/landing page (Vite + React). No login required — this is
 what anyone (including judges) sees when they visit the project's public

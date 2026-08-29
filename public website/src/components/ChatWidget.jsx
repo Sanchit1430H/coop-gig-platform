@@ -4,7 +4,7 @@ import { getAnswer, SUGGESTED_QUESTIONS } from '../api/faqBot';
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { from: 'bot', text: "Hi! I'm the Seva-E-Akramikta FAQ Assistant. Ask me about pricing, worker verification, disputes, or how booking works." },
+    { from: 'bot', text: "Hi! I'm the Kushal-Setu FAQ Assistant. Ask me about pricing, worker verification, disputes, or how booking works." },
   ]);
   const [input, setInput] = useState('');
   const scrollRef = useRef(null);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Testimonials from './components/Testimonials';
+// Note: We removed the external Testimonials import because we built it directly into this file below!
 import ChatWidget from './components/ChatWidget';
 import { api } from './api/client';
 import './styles.css';
@@ -10,24 +10,79 @@ const CATEGORY_ICONS = {
 };
 
 const STEPS = [
-  { step: '1 Step', desc: 'Find service and book' },
-  { step: '2 Step', desc: 'Worker is verified' },
-  { step: '3 Step', desc: 'Job gets completed' },
-  { step: '4 Step', desc: 'Direct, fair pay' },
+  { step: 'Step 1', desc: 'Find service and book' },
+  { step: 'Step 2', desc: 'Worker is verified' },
+  { step: 'Step 3', desc: 'Job gets completed' },
+  { step: 'Step 4', desc: 'Direct, fair pay' },
 ];
+
+// ---------------------------------------------------------
+// NEW TESTIMONIALS COMPONENT (Built right in for the demo!)
+// ---------------------------------------------------------
+const Testimonials = () => {
+  const reviews = [
+    {
+      id: 1,
+      name: "Priya S.",
+      location: "Bhubaneswar",
+      rating: "⭐⭐⭐⭐⭐",
+      text: "The electrician arrived in 20 minutes. Finally a platform where I know the worker is actually getting the full amount I pay!"
+    },
+    {
+      id: 2,
+      name: "Rahul M.",
+      location: "Rourkela",
+      rating: "⭐⭐⭐⭐⭐",
+      text: "Booked a plumber through Kushal-Setu. The AI dispatch matched me perfectly. Excellent service and zero hidden fees."
+    },
+    {
+      id: 3,
+      name: "Anjali D.",
+      location: "Cuttack",
+      rating: "⭐⭐⭐⭐",
+      text: "I love the cooperative model. The carpenter was highly skilled and very professional. Will definitely use this again."
+    }
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {reviews.map((review) => (
+        <div key={review.id} style={{
+          backgroundColor: '#f8f9fa',
+          padding: '12px',
+          borderRadius: '8px',
+          borderLeft: '4px solid #f97316',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <p style={{ margin: '0 0 6px 0', fontSize: '13px', fontStyle: 'italic', color: '#4b5563' }}>"{review.text}"</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#111827' }}>- {review.name} ({review.location})</span>
+            <span style={{ fontSize: '10px' }}>{review.rating}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+// ---------------------------------------------------------
+
 
 export default function App() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    api.getStats().then(setStats).catch(() => {});
+    // If api.getStats is failing because the backend isn't up, 
+    // we catch the error so it doesn't break the frontend demo.
+    if (api && api.getStats) {
+      api.getStats().then(setStats).catch(() => console.log("Backend not connected yet"));
+    }
   }, []);
 
   return (
     <div className="site">
       <header className="topbar">
-        <div className="brand-mark">
-          <span style={{color: '#f97316'}}>⚡</span> Seva-E-Akramikta
+        <div className="brand-mark" style={{ fontWeight: 'bold', fontSize: '20px' }}>
+          <span style={{color: '#f97316'}}>⚡</span> Kushal-Setu
         </div>
         <nav className="topnav">
           <a href="#services">Services ▾</a>
@@ -36,7 +91,7 @@ export default function App() {
           <a href="#community">Community</a>
           <a href="#support">Support</a>
           <a href="#account" className="account-link">Account ▾</a>
-          <button className="nav-btn-orange">Post a Request</button>
+          <button className="nav-btn-orange" onClick={() => alert("Post Request modal coming soon!")}>Post a Request</button>
         </nav>
       </header>
 
@@ -49,14 +104,14 @@ export default function App() {
           <div className="search-bar">
             <div className="search-input-group">
               <span className="search-icon">🔍</span>
-              <select defaultValue=""><option value="" disabled>Service Type</option><option>Plumber</option><option>Electrician</option></select>
+              <select defaultValue=""><option value="" disabled>Service Type</option><option>Plumber</option><option>Electrician</option><option>Carpenter</option><option>Cleaner</option></select>
             </div>
             <div className="search-divider"></div>
             <div className="search-input-group">
               <span className="search-icon">📍</span>
-              <input type="text" placeholder="Location Input" />
+              <input type="text" placeholder="Enter your city (e.g. Bhubaneswar)" />
             </div>
-            <button className="search-btn">Search & Book</button>
+            <button className="search-btn" onClick={() => alert("Searching for workers nearby...")}>Search & Book</button>
           </div>
         </div>
       </section>
@@ -69,7 +124,7 @@ export default function App() {
              <div className="pay-bar-fill"></div>
           </div>
           <span className="pay-bar-text">100% pay to the worker</span>
-          <p className="sub-text">Seva-E-Akramikta is built on a cooperative model that eliminates middleman margins.</p>
+          <p className="sub-text">Kushal-Setu is built on a cooperative model that eliminates middleman margins.</p>
         </div>
         
         <div className="feature-card-img">
@@ -103,7 +158,7 @@ export default function App() {
           <div className="mini-steps-grid">
             {STEPS.map((s, idx) => (
               <div key={idx} className="mini-step-card">
-                <div className="mini-step-img">📸</div>
+                <div className="mini-step-img">✅</div>
                 <div className="mini-step-text">
                   <strong>{s.step}</strong>
                   <p>{s.desc}</p>
@@ -122,9 +177,10 @@ export default function App() {
       </section>
       
       <footer className="dark-footer">
-          <p>Seva-E-Akramikta | Terms | Privacy | Help</p>
+          <p>© 2026 Kushal-Setu | Terms | Privacy | Help</p>
       </footer>
 
+      {/* Note: Ensure ChatWidget exists in your components folder, or comment this line out if it crashes */}
       <ChatWidget />
     </div>
   );
