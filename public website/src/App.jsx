@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import ChatWidget from './components/ChatWidget';
 import { api } from './api/client';
 import './styles.css';
 
-// --- NEW REAL MAP IMPORTS ---
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+// Added Polyline to draw the GPS route!
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 
-// --- CUSTOM MAP ICONS (Tied to real coordinates) ---
 const createIcon = (emoji, color) => L.divIcon({
   html: `<div style="font-size: 20px; background: white; border-radius: 50%; border: 3px solid ${color}; box-shadow: 0 4px 6px rgba(0,0,0,0.3); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">${emoji}</div>`,
   className: 'custom-map-icon',
@@ -16,9 +15,9 @@ const createIcon = (emoji, color) => L.divIcon({
   popupAnchor: [0, -18]
 });
 
-const customerIcon = createIcon('📍', '#ef4444'); // Red for Customer
-const activeWorkerIcon = createIcon('🚗', '#22c55e'); // Green for Assigned Worker
-const idleWorkerIcon = createIcon('👷', '#94a3b8'); // Gray for other available workers
+const customerIcon = createIcon('📍', '#ef4444'); 
+const activeWorkerIcon = createIcon('🚗', '#22c55e'); 
+const idleWorkerIcon = createIcon('👷', '#94a3b8'); 
 
 const CATEGORY_ICONS = {
   plumber: '🔧', electrician: '⚡', carpenter: '🪚', mason: '🧱',
@@ -61,12 +60,23 @@ export default function App() {
   const [isEmergency, setIsEmergency] = useState(false);
   const [selectedService, setSelectedService] = useState('plumber');
 
-  // --- GPS COORDINATES FOR BHUBANESWAR ---
-  const customerGPS = [20.2960, 85.8245]; // Destination
-  const workerStartGPS = [20.3150, 85.8050]; // Worker starting point
-  const [workerPos, setWorkerPos] = useState(workerStartGPS);
+  // --- WAYPOINT ROUTING (Real City Block Turns in Bhubaneswar) ---
+  const routeCoords = [
+    [20.3150, 85.8050], // Start (Worker)
+    [20.3150, 85.8110], // Drives East to intersection
+    [20.3050, 85.8110], // Turns South
+    [20.3050, 85.8180], // Turns East
+    [20.2960, 85.8180], // Turns South
+    [20.2960, 85.8245]  // Turns East to Customer Destination
+  ];
+  const customerGPS = routeCoords[routeCoords.length - 1];
 
-  // Fake "nearby" workers to make the map look populated and real
+  const [workerPos, setWorkerPos] = useState(routeCoords[0]);
+  
+  // We use refs so the animation interval doesn't lose track of the car's state
+  const routeIndexRef = useRef(0);
+  const posRef = useRef(routeCoords[0]);
+
   const availableWorkers = [
     [20.3010, 85.8300],
     [20.2850, 85.8150],
@@ -74,29 +84,49 @@ export default function App() {
     [20.3050, 85.8100]
   ];
 
-  // --- MATHEMATICAL DRIVING SIMULATION ---
-  // This updates the GPS coordinates smoothly so the car actually moves across the map
+  // --- NEW: STREET-SNAP ANIMATION ENGINE ---
   useEffect(() => {
     let interval;
     if (currentView === 'tracking') {
-      setWorkerPos(workerStartGPS); // Reset to start
+      routeIndexRef.current = 0;
+      posRef.current = [...routeCoords[0]];
+      setWorkerPos(posRef.current);
+
       interval = setInterval(() => {
-        setWorkerPos((prev) => {
-          const latDiff = customerGPS[0] - prev[0];
-          const lngDiff = customerGPS[1] - prev[1];
-          
-          // If the worker has reached the customer, stop the interval
-          if (Math.abs(latDiff) < 0.0002 && Math.abs(lngDiff) < 0.0002) {
-            clearInterval(interval);
-            return prev;
+        if (routeIndexRef.current >= routeCoords.length - 1) {
+          clearInterval(interval);
+          return;
+        }
+
+        const target = routeCoords[routeIndexRef.current + 1];
+        const current = posRef.current;
+        
+        const latDiff = target[0] - current[0];
+        const lngDiff = target[1] - current[1];
+        const dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+
+        // If the car reaches the intersection, snap to it and target the next turn
+        if (dist < 0.0005) {
+          routeIndexRef.current++;
+          if(routeIndexRef.current >= routeCoords.length - 1) {
+              posRef.current = [...routeCoords[routeCoords.length - 1]];
+              setWorkerPos(posRef.current);
+              clearInterval(interval);
+              return;
           }
-          // Move 2% of the remaining distance every 500ms
-          return [prev[0] + (latDiff * 0.02), prev[1] + (lngDiff * 0.02)];
-        });
-      }, 500); 
+        } else {
+          // Drive along the road (faster if emergency!)
+          const speed = isEmergency ? 0.0008 : 0.0003; 
+          posRef.current = [
+            current[0] + (latDiff / dist) * speed,
+            current[1] + (lngDiff / dist) * speed
+          ];
+          setWorkerPos([...posRef.current]);
+        }
+      }, 100); 
     }
     return () => clearInterval(interval);
-  }, [currentView]);
+  }, [currentView, isEmergency]);
 
   // --- PAGE 1: HOME PAGE ---
   const renderHome = () => (
@@ -231,7 +261,7 @@ export default function App() {
     </div>
   );
 
-  // --- PAGE 3: LIVE TRACKING (NOW WITH REAL LEAFLET MAPS) ---
+  // --- PAGE 3: LIVE TRACKING (NOW WITH STREET ROUTES) ---
   const renderTracking = () => (
     <div className="tracking-page-container fade-in">
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Cancel & Return Home</button>
@@ -243,25 +273,24 @@ export default function App() {
             <p>{isEmergency ? "Worker is arriving in 5 mins." : "Worker will arrive at scheduled time."}</p>
           </div>
           
-          {/* REAL MAP COMPONENT */}
           <div className="map-container" style={{ height: '350px', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '20px', zIndex: 1 }}>
-            <MapContainer center={customerGPS} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+            <MapContainer center={[20.3055, 85.8147]} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; OpenStreetMap'
               />
               
-              {/* You (The Customer) */}
+              {/* THIS DRAWS THE BLUE GPS ROUTE ON THE ROADS */}
+              <Polyline positions={routeCoords} color="#3b82f6" weight={5} dashArray="8, 10" opacity={0.7} />
+
               <Marker position={customerGPS} icon={customerIcon}>
                 <Popup>Your Location</Popup>
               </Marker>
 
-              {/* The Moving Worker */}
               <Marker position={workerPos} icon={activeWorkerIcon}>
                 <Popup>Ramesh (Assigned to you)</Popup>
               </Marker>
 
-              {/* Other Available Workers in the Area */}
               {availableWorkers.map((pos, idx) => (
                 <Marker key={idx} position={pos} icon={idleWorkerIcon}>
                   <Popup>Available Worker</Popup>
