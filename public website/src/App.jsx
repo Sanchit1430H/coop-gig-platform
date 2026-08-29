@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import ChatWidget from './components/ChatWidget';
 import { api } from './api/client';
 import './styles.css';
 
-// Added Polyline to draw the GPS route!
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -31,51 +30,27 @@ const STEPS = [
   { step: 'Step 4', desc: 'Direct, fair pay' },
 ];
 
-const Testimonials = () => {
-  const reviews = [
-    { id: 1, name: "Priya S.", location: "Bhubaneswar", rating: "⭐⭐⭐⭐⭐", text: "The electrician arrived in 20 minutes. Finally a platform where I know the worker is actually getting the full amount I pay!" },
-    { id: 2, name: "Rahul M.", location: "Rourkela", rating: "⭐⭐⭐⭐⭐", text: "Booked a plumber through Kushal-Setu. The AI dispatch matched me perfectly. Excellent service and zero hidden fees." },
-    { id: 3, name: "Anjali D.", location: "Cuttack", rating: "⭐⭐⭐⭐", text: "I love the cooperative model. The carpenter was highly skilled and very professional. Will definitely use this again." },
-  ];
-
-  return (
-    <div className="marquee-container">
-      <div className="marquee-track">
-        {[...reviews, ...reviews].map((review, index) => (
-          <div key={index} className="testimonial-card bubble-effect">
-            <p className="testimonial-text">"{review.text}"</p>
-            <div className="testimonial-footer">
-              <span className="testimonial-author">- {review.name} ({review.location})</span>
-              <span className="testimonial-rating">{review.rating}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
   const [isEmergency, setIsEmergency] = useState(false);
   const [selectedService, setSelectedService] = useState('plumber');
+  const [searchStatus, setSearchStatus] = useState('searching'); // 'searching' or 'found'
 
-  // --- WAYPOINT ROUTING (Real City Block Turns in Bhubaneswar) ---
+  // --- WAYPOINT ROUTING (More points for discrete jumps) ---
   const routeCoords = [
-    [20.3150, 85.8050], // Start (Worker)
-    [20.3150, 85.8110], // Drives East to intersection
-    [20.3050, 85.8110], // Turns South
-    [20.3050, 85.8180], // Turns East
-    [20.2960, 85.8180], // Turns South
-    [20.2960, 85.8245]  // Turns East to Customer Destination
+    [20.3150, 85.8050],
+    [20.3110, 85.8050],
+    [20.3050, 85.8050],
+    [20.3050, 85.8110],
+    [20.3050, 85.8180],
+    [20.3000, 85.8180],
+    [20.2960, 85.8180],
+    [20.2960, 85.8210],
+    [20.2960, 85.8245] // Customer destination
   ];
   const customerGPS = routeCoords[routeCoords.length - 1];
 
   const [workerPos, setWorkerPos] = useState(routeCoords[0]);
-  
-  // We use refs so the animation interval doesn't lose track of the car's state
-  const routeIndexRef = useRef(0);
-  const posRef = useRef(routeCoords[0]);
 
   const availableWorkers = [
     [20.3010, 85.8300],
@@ -84,49 +59,43 @@ export default function App() {
     [20.3050, 85.8100]
   ];
 
-  // --- NEW: STREET-SNAP ANIMATION ENGINE ---
+  // --- NEW: DISCRETE GPS POLLING SIMULATION ---
   useEffect(() => {
     let interval;
     if (currentView === 'tracking') {
-      routeIndexRef.current = 0;
-      posRef.current = [...routeCoords[0]];
-      setWorkerPos(posRef.current);
+      let currentIndex = 0;
+      setWorkerPos(routeCoords[0]);
 
+      // Updates position exactly once every 2.5 seconds (or 1.5s for emergency)
+      const pollRate = isEmergency ? 1500 : 2500;
+      
       interval = setInterval(() => {
-        if (routeIndexRef.current >= routeCoords.length - 1) {
+        currentIndex++;
+        if (currentIndex >= routeCoords.length) {
           clearInterval(interval);
-          return;
-        }
-
-        const target = routeCoords[routeIndexRef.current + 1];
-        const current = posRef.current;
-        
-        const latDiff = target[0] - current[0];
-        const lngDiff = target[1] - current[1];
-        const dist = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-
-        // If the car reaches the intersection, snap to it and target the next turn
-        if (dist < 0.0005) {
-          routeIndexRef.current++;
-          if(routeIndexRef.current >= routeCoords.length - 1) {
-              posRef.current = [...routeCoords[routeCoords.length - 1]];
-              setWorkerPos(posRef.current);
-              clearInterval(interval);
-              return;
-          }
         } else {
-          // Drive along the road (faster if emergency!)
-          const speed = isEmergency ? 0.0008 : 0.0003; 
-          posRef.current = [
-            current[0] + (latDiff / dist) * speed,
-            current[1] + (lngDiff / dist) * speed
-          ];
-          setWorkerPos([...posRef.current]);
+          setWorkerPos(routeCoords[currentIndex]);
         }
-      }, 100); 
+      }, pollRate);
     }
     return () => clearInterval(interval);
   }, [currentView, isEmergency]);
+
+  // Handle the transition from Booking -> Loading -> Tracking
+  const handleBookSubmit = () => {
+    setCurrentView('searching');
+    setSearchStatus('searching');
+    
+    // Fake loading delay to find worker
+    setTimeout(() => {
+      setSearchStatus('found');
+      
+      // Show success message briefly, then load map
+      setTimeout(() => {
+        setCurrentView('tracking');
+      }, 1500);
+    }, 3500); // 3.5 seconds of searching
+  };
 
   // --- PAGE 1: HOME PAGE ---
   const renderHome = () => (
@@ -156,26 +125,6 @@ export default function App() {
         </div>
       </section>
 
-      <section className="feature-cards-container">
-        <div className="feature-card-img bubble-effect">
-          <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=400&q=80" alt="Cooperative Team" className="card-illustration" />
-          <h3>Fair-Share Cooperative</h3>
-          <div className="pay-bar-container"><div className="pay-bar-fill"></div></div>
-          <span className="pay-bar-text">100% pay to the worker</span>
-          <p className="sub-text">Kushal-Setu is built on a cooperative model that eliminates middleman margins.</p>
-        </div>
-        <div className="feature-card-img bubble-effect">
-          <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=400&q=80" alt="Verification" className="card-illustration" />
-          <h3>Government Verified</h3>
-          <p className="sub-text">Every single worker on our platform is strictly background checked on the national database.</p>
-        </div>
-        <div className="feature-card-img bubble-effect">
-          <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=400&q=80" alt="Dispatch Map" className="card-illustration" />
-          <h3>AI Dispatch Engine</h3>
-          <p className="sub-text">Our intelligent algorithm automatically matches the exact worker based on real-time proximity.</p>
-        </div>
-      </section>
-
       <section className="bottom-grid">
         <div className="column-section">
           <h4>Featured Service Category</h4>
@@ -200,11 +149,6 @@ export default function App() {
           </div>
         </div>
       </section>
-
-      <section className="testimonials-section">
-        <h2 style={{textAlign: 'center', marginBottom: '20px', color: '#111827'}}>What Our Customers Say</h2>
-        <Testimonials />
-      </section>
     </>
   );
 
@@ -228,17 +172,17 @@ export default function App() {
         <div className="form-row">
           <div className="form-group">
             <label>Date</label>
-            <input type="date" className="form-input" required />
+            <input type="date" className="form-input" />
           </div>
           <div className="form-group">
             <label>Time</label>
-            <input type="time" className="form-input" required />
+            <input type="time" className="form-input" />
           </div>
         </div>
 
         <div className="form-group">
           <label>Exact Location</label>
-          <input type="text" className="form-input" placeholder="e.g. Patia, Bhubaneswar" required />
+          <input type="text" className="form-input" placeholder="e.g. Patia, Bhubaneswar" />
         </div>
 
         <div className={`emergency-box ${isEmergency ? 'emergency-active' : ''}`}>
@@ -254,14 +198,35 @@ export default function App() {
           </div>
         </div>
 
-        <button className={`confirm-btn ${isEmergency ? 'btn-red' : 'btn-orange'}`} onClick={() => setCurrentView('tracking')}>
+        <button className={`confirm-btn ${isEmergency ? 'btn-red' : 'btn-orange'}`} onClick={handleBookSubmit}>
           {isEmergency ? `Dispatch Emergency ${selectedService} Now` : "Confirm Standard Booking"}
         </button>
       </div>
     </div>
   );
 
-  // --- PAGE 3: LIVE TRACKING (NOW WITH STREET ROUTES) ---
+  // --- PAGE 2.5: LOADING / SEARCHING SCREEN ---
+  const renderSearching = () => (
+    <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <div className="booking-card" style={{ textAlign: 'center', maxWidth: '400px', width: '100%' }}>
+        {searchStatus === 'searching' ? (
+          <>
+            <div className="loading-spinner"></div>
+            <h2 style={{marginTop: '24px'}}>AI Dispatch Active</h2>
+            <p>Locating the nearest verified {selectedService}...</p>
+          </>
+        ) : (
+          <>
+            <div className="success-checkmark">✅</div>
+            <h2 style={{marginTop: '24px'}}>Worker Assigned!</h2>
+            <p>Ramesh has accepted your request. Loading live tracking...</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // --- PAGE 3: LIVE TRACKING ---
   const renderTracking = () => (
     <div className="tracking-page-container fade-in">
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Cancel & Return Home</button>
@@ -270,17 +235,16 @@ export default function App() {
         <div className="tracking-left">
           <div className={`status-banner ${isEmergency ? 'banner-red' : 'banner-green'}`}>
             <h3>{isEmergency ? "🚨 Emergency Worker Dispatched!" : "✅ Booking Confirmed!"}</h3>
-            <p>{isEmergency ? "Worker is arriving in 5 mins." : "Worker will arrive at scheduled time."}</p>
+            <p>{isEmergency ? "Worker is arriving rapidly." : "Worker is on the way."}</p>
           </div>
           
           <div className="map-container" style={{ height: '350px', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '20px', zIndex: 1 }}>
-            <MapContainer center={[20.3055, 85.8147]} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+            <MapContainer center={[20.3055, 85.8147]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; OpenStreetMap'
               />
               
-              {/* THIS DRAWS THE BLUE GPS ROUTE ON THE ROADS */}
               <Polyline positions={routeCoords} color="#3b82f6" weight={5} dashArray="8, 10" opacity={0.7} />
 
               <Marker position={customerGPS} icon={customerIcon}>
@@ -316,7 +280,7 @@ export default function App() {
               <div className="chat-msg system-msg">System: Found {availableWorkers.length + 1} nearby workers. AI Matched you with Ramesh based on real-time location.</div>
               {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Ramesh is dropping current tasks to reach you.</div>}
               <div className="chat-msg worker-msg">
-                <strong>Ramesh:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am driving fast, reaching in 5 mins!" : "I will reach your location at the booked time."}
+                <strong>Ramesh:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
               </div>
             </div>
             <div className="chat-input-area">
@@ -343,6 +307,7 @@ export default function App() {
 
       {currentView === 'home' && renderHome()}
       {currentView === 'booking' && renderBooking()}
+      {currentView === 'searching' && renderSearching()}
       {currentView === 'tracking' && renderTracking()}
       
       {currentView === 'home' && (
@@ -351,7 +316,7 @@ export default function App() {
         </footer>
       )}
 
-      {currentView !== 'tracking' && <ChatWidget />}
+      {currentView === 'home' && <ChatWidget />}
     </div>
   );
 }
