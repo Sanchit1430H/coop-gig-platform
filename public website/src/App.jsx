@@ -210,7 +210,13 @@ export default function App() {
           </div>
           
           <div className="map-container">
-            <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=800&q=80" alt="Map" className="map-image" />
+           <iframe 
+  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d119743.53374950663!2d85.73693241517409!3d20.2998637784013!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a1909d2d5170aa5%3A0xfc580e2b68b33fa8!2sBhubaneswar%2C%20Odisha!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin" 
+  className="map-image"
+  style={{ border: 0 }} 
+  allowFullScreen="" 
+  loading="lazy">
+</iframe>
             <div className="worker-dot"></div>
             <div className="customer-dot"></div>
           </div>
