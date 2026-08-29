@@ -30,13 +30,37 @@ const STEPS = [
   { step: 'Step 4', desc: 'Direct, fair pay' },
 ];
 
+const Testimonials = () => {
+  const reviews = [
+    { id: 1, name: "Priya S.", location: "Bhubaneswar", rating: "⭐⭐⭐⭐⭐", text: "The electrician arrived in 20 minutes. Finally a platform where I know the worker is actually getting the full amount I pay!" },
+    { id: 2, name: "Rahul M.", location: "Rourkela", rating: "⭐⭐⭐⭐⭐", text: "Booked a plumber through Kushal-Setu. The AI dispatch matched me perfectly. Excellent service and zero hidden fees." },
+    { id: 3, name: "Anjali D.", location: "Cuttack", rating: "⭐⭐⭐⭐", text: "I love the cooperative model. The carpenter was highly skilled and very professional. Will definitely use this again." },
+    { id: 4, name: "Vikram K.", location: "Bhubaneswar", rating: "⭐⭐⭐⭐⭐", text: "Incredible app! The house cleaner was verified and did a spotless job. The direct pay feature is a game changer." }
+  ];
+
+  return (
+    <div className="marquee-container">
+      <div className="marquee-track">
+        {[...reviews, ...reviews].map((review, index) => (
+          <div key={index} className="testimonial-card bubble-effect">
+            <p className="testimonial-text">"{review.text}"</p>
+            <div className="testimonial-footer">
+              <span className="testimonial-author">- {review.name} ({review.location})</span>
+              <span className="testimonial-rating">{review.rating}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [currentView, setCurrentView] = useState('home');
   const [isEmergency, setIsEmergency] = useState(false);
   const [selectedService, setSelectedService] = useState('plumber');
-  const [searchStatus, setSearchStatus] = useState('searching'); // 'searching' or 'found'
+  const [searchStatus, setSearchStatus] = useState('searching');
 
-  // --- WAYPOINT ROUTING (More points for discrete jumps) ---
   const routeCoords = [
     [20.3150, 85.8050],
     [20.3110, 85.8050],
@@ -46,7 +70,7 @@ export default function App() {
     [20.3000, 85.8180],
     [20.2960, 85.8180],
     [20.2960, 85.8210],
-    [20.2960, 85.8245] // Customer destination
+    [20.2960, 85.8245]
   ];
   const customerGPS = routeCoords[routeCoords.length - 1];
 
@@ -59,14 +83,11 @@ export default function App() {
     [20.3050, 85.8100]
   ];
 
-  // --- NEW: DISCRETE GPS POLLING SIMULATION ---
   useEffect(() => {
     let interval;
     if (currentView === 'tracking') {
       let currentIndex = 0;
       setWorkerPos(routeCoords[0]);
-
-      // Updates position exactly once every 2.5 seconds (or 1.5s for emergency)
       const pollRate = isEmergency ? 1500 : 2500;
       
       interval = setInterval(() => {
@@ -81,23 +102,18 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentView, isEmergency]);
 
-  // Handle the transition from Booking -> Loading -> Tracking
   const handleBookSubmit = () => {
     setCurrentView('searching');
     setSearchStatus('searching');
     
-    // Fake loading delay to find worker
     setTimeout(() => {
       setSearchStatus('found');
-      
-      // Show success message briefly, then load map
       setTimeout(() => {
         setCurrentView('tracking');
       }, 1500);
-    }, 3500); // 3.5 seconds of searching
+    }, 3500);
   };
 
-  // --- PAGE 1: HOME PAGE ---
   const renderHome = () => (
     <>
       <section className="hero-section">
@@ -149,10 +165,15 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      {/* RESTORED TESTIMONIALS SECTION */}
+      <section className="testimonials-section">
+        <h2>What Our Customers Say</h2>
+        <Testimonials />
+      </section>
     </>
   );
 
-  // --- PAGE 2: BOOKING FORM ---
   const renderBooking = () => (
     <div className="booking-page-container fade-in">
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
@@ -205,7 +226,6 @@ export default function App() {
     </div>
   );
 
-  // --- PAGE 2.5: LOADING / SEARCHING SCREEN ---
   const renderSearching = () => (
     <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
       <div className="booking-card" style={{ textAlign: 'center', maxWidth: '400px', width: '100%' }}>
@@ -226,7 +246,6 @@ export default function App() {
     </div>
   );
 
-  // --- PAGE 3: LIVE TRACKING ---
   const renderTracking = () => (
     <div className="tracking-page-container fade-in">
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Cancel & Return Home</button>
