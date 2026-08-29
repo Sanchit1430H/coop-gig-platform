@@ -309,3 +309,12 @@ input:checked + .slider:before { transform: translateX(22px); }
   0% { transform: scale(0); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+/* --- Worker registration additions --- */
+.reg-step-indicator { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 12px; color: #94a3b8; font-weight: 600; }
+.reg-step-active { color: #f97316; }
+.reg-step-done { color: #22c55e; }
+.reg-step-divider { color: #cbd5e1; }
+.reg-error { color: #ef4444; font-size: 13px; margin-bottom: 12px; }
+.reg-disclaimer { font-size: 11px; color: #94a3b8; line-height: 1.6; margin-bottom: 16px; background: #f8fafc; padding: 10px 12px; border-radius: 8px; }
+.reg-photo-preview { width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
+.topnav a { cursor: pointer; }
