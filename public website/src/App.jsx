@@ -40,9 +40,11 @@ const Testimonials = () => {
 };
 
 export default function App() {
-  // STATE TO CONTROL WHICH PAGE WE ARE ON: 'home', 'booking', 'tracking'
   const [currentView, setCurrentView] = useState('home');
   const [isEmergency, setIsEmergency] = useState(false);
+  
+  // NEW: Memory for which service the user clicked!
+  const [selectedService, setSelectedService] = useState('plumber');
 
   // --- PAGE 1: HOME PAGE ---
   const renderHome = () => (
@@ -56,19 +58,27 @@ export default function App() {
           <div className="search-bar bubble-effect" style={{animationDelay: '0.4s'}}>
             <div className="search-input-group">
               <span className="search-icon">🔍</span>
-              <select defaultValue=""><option value="" disabled>Service Type</option><option>Plumber</option><option>Electrician</option></select>
+              {/* Dropdown updates our memory */}
+              <select 
+                value={selectedService} 
+                onChange={(e) => setSelectedService(e.target.value)}
+              >
+                {Object.keys(CATEGORY_ICONS).map(name => (
+                  <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
+                ))}
+              </select>
             </div>
             <div className="search-divider"></div>
             <div className="search-input-group">
               <span className="search-icon">📍</span>
               <input type="text" placeholder="Enter your city (e.g. Bhubaneswar)" />
             </div>
-            {/* BUTTON TRIGGERS BOOKING PAGE */}
             <button className="search-btn bubble-effect" onClick={() => setCurrentView('booking')}>Search & Book</button>
           </div>
         </div>
       </section>
 
+      {/* Feature cards omitted for brevity, but they stay exactly the same */}
       <section className="feature-cards-container">
         <div className="feature-card-img bubble-effect">
           <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=400&q=80" alt="Cooperative Team" className="card-illustration" />
@@ -77,13 +87,11 @@ export default function App() {
           <span className="pay-bar-text">100% pay to the worker</span>
           <p className="sub-text">Kushal-Setu is built on a cooperative model that eliminates middleman margins.</p>
         </div>
-        
         <div className="feature-card-img bubble-effect">
           <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=400&q=80" alt="Verification" className="card-illustration" />
           <h3>Government Verified</h3>
           <p className="sub-text">Every single worker on our platform is strictly background checked on the national database.</p>
         </div>
-        
         <div className="feature-card-img bubble-effect">
           <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=400&q=80" alt="Dispatch Map" className="card-illustration" />
           <h3>AI Dispatch Engine</h3>
@@ -96,7 +104,15 @@ export default function App() {
           <h4>Featured Service Category</h4>
           <div className="mini-category-grid">
             {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
-              <div key={name} className="mini-category-chip bubble-effect" onClick={() => setCurrentView('booking')}>
+              <div 
+                key={name} 
+                className="mini-category-chip bubble-effect" 
+                onClick={() => {
+                  // NEW: When they click a chip, remember the name AND switch pages
+                  setSelectedService(name);
+                  setCurrentView('booking');
+                }}
+              >
                 <span className="mini-icon">{icon}</span>
                 <span className="mini-name capitalize">{name}</span>
               </div>
@@ -133,23 +149,32 @@ export default function App() {
         
         <div className="form-group">
           <label>Service Required</label>
-          <select className="form-input"><option>Electrician</option><option>Plumber</option><option>Carpenter</option></select>
+          {/* NEW: Automatically shows the service they clicked on the home page! */}
+          <select 
+            className="form-input capitalize" 
+            value={selectedService}
+            onChange={(e) => setSelectedService(e.target.value)}
+          >
+            {Object.keys(CATEGORY_ICONS).map(name => (
+              <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
+            ))}
+          </select>
         </div>
 
         <div className="form-row">
           <div className="form-group">
             <label>Date</label>
-            <input type="date" className="form-input" />
+            <input type="date" className="form-input" required />
           </div>
           <div className="form-group">
             <label>Time</label>
-            <input type="time" className="form-input" />
+            <input type="time" className="form-input" required />
           </div>
         </div>
 
         <div className="form-group">
           <label>Exact Location</label>
-          <input type="text" className="form-input" placeholder="e.g. Patia, Bhubaneswar" />
+          <input type="text" className="form-input" placeholder="e.g. Patia, Bhubaneswar" required />
         </div>
 
         <div className={`emergency-box ${isEmergency ? 'emergency-active' : ''}`}>
@@ -166,7 +191,7 @@ export default function App() {
         </div>
 
         <button className={`confirm-btn ${isEmergency ? 'btn-red' : 'btn-orange'}`} onClick={() => setCurrentView('tracking')}>
-          {isEmergency ? "Dispatch Emergency Worker Now" : "Confirm Standard Booking"}
+          {isEmergency ? `Dispatch Emergency ${selectedService} Now` : "Confirm Standard Booking"}
         </button>
       </div>
     </div>
@@ -178,7 +203,6 @@ export default function App() {
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Cancel & Return Home</button>
       
       <div className="tracking-grid">
-        {/* Left Side: Map & Worker Info */}
         <div className="tracking-left">
           <div className={`status-banner ${isEmergency ? 'banner-red' : 'banner-green'}`}>
             <h3>{isEmergency ? "🚨 Emergency Worker Dispatched!" : "✅ Booking Confirmed!"}</h3>
@@ -186,7 +210,6 @@ export default function App() {
           </div>
           
           <div className="map-container">
-            {/* Fake Map Image with a pulsing dot for the worker */}
             <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=800&q=80" alt="Map" className="map-image" />
             <div className="worker-dot"></div>
             <div className="customer-dot"></div>
@@ -196,13 +219,13 @@ export default function App() {
             <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Worker" className="worker-avatar" />
             <div className="worker-details">
               <h4>Ramesh Kumar</h4>
-              <p>⭐ 4.9 (120 Jobs) • Verified Electrician</p>
+              {/* NEW: Displays the service they booked dynamically */}
+              <p className="capitalize">⭐ 4.9 (120 Jobs) • Verified {selectedService}</p>
               <span className="coop-badge">Cooperative Member (100% Payout)</span>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Live Chat */}
         <div className="tracking-right">
           <div className="chat-interface">
             <div className="chat-header-small">Live Chat with Ramesh</div>
@@ -210,7 +233,7 @@ export default function App() {
               <div className="chat-msg system-msg">System: AI Matched you with Ramesh based on real-time location.</div>
               {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Ramesh is dropping current tasks to reach you.</div>}
               <div className="chat-msg worker-msg">
-                <strong>Ramesh:</strong> Hello! I have received your request. {isEmergency ? "I am driving fast, reaching in 5 mins!" : "I will reach your location at the booked time."}
+                <strong>Ramesh:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am driving fast, reaching in 5 mins!" : "I will reach your location at the booked time."}
               </div>
             </div>
             <div className="chat-input-area">
@@ -235,7 +258,6 @@ export default function App() {
         </nav>
       </header>
 
-      {/* RENDER THE CORRECT PAGE BASED ON STATE */}
       {currentView === 'home' && renderHome()}
       {currentView === 'booking' && renderBooking()}
       {currentView === 'tracking' && renderTracking()}
@@ -246,7 +268,6 @@ export default function App() {
         </footer>
       )}
 
-      {/* Hide ChatWidget on tracking page since it has its own chat */}
       {currentView !== 'tracking' && <ChatWidget />}
     </div>
   );
