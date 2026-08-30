@@ -24,10 +24,10 @@ const CATEGORY_ICONS = {
 };
 
 const STEPS = [
-  { step: 'Step 1', desc: 'Find service and book' },
-  { step: 'Step 2', desc: 'Worker is verified' },
-  { step: 'Step 3', desc: 'Job gets completed' },
-  { step: 'Step 4', desc: 'Direct, fair pay' },
+  { step: 'Step 1', desc: 'Find service and book', img: '/step1.png' },
+  { step: 'Step 2', desc: 'Worker is verified', img: '/step2.png' },
+  { step: 'Step 3', desc: 'Job gets completed', img: '/step3.png' },
+  { step: 'Step 4', desc: 'Direct, fair pay', img: '/step4.png' },
 ];
 
 const Testimonials = () => {
@@ -276,8 +276,8 @@ export default function App() {
           'Authorization': `Bearer ${customerToken}`
         },
         body: JSON.stringify({
-          category_id: actualCategoryId, // NOW IT SENDS THE REAL CATEGORY!
-          lat: 20.4620,   // GPS coordinates near Expo app default
+          category_id: actualCategoryId, 
+          lat: 20.4620,   
           lng: 85.8820,   
           address_text: "Customer Location (Demo)",
           is_emergency: isEmergency ? 1 : 0
@@ -346,10 +346,24 @@ export default function App() {
               <span className="search-icon">📍</span>
               <input type="text" placeholder="Enter your city (e.g. Bhubaneswar)" />
             </div>
-            {/* If logged in -> go to booking. If not -> go to login */}
             <button className="search-btn bubble-effect" onClick={() => customerToken ? setCurrentView('booking') : setCurrentView('customer-login')}>Search & Book</button>
           </div>
         </div>
+      </section>
+
+      {/* --- MISSING FEATURES SECTION RESTORED --- */}
+      <section style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '0 20px', marginTop: '-50px', position: 'relative', zIndex: 10, flexWrap: 'wrap', maxWidth: '1200px', margin: '-50px auto 40px auto' }}>
+        {[
+          { icon: '🤝', title: 'Fair-Share Cooperative', desc: '100% pay to the worker. Built on a cooperative model eliminating middleman margins.' },
+          { icon: '🏛️', title: 'Government Verified', desc: 'Every single worker is strictly background checked via the national e-Shram database.' },
+          { icon: '🤖', title: 'AI Dispatch Engine', desc: 'Our intelligent algorithm automatically matches you based on skill, proximity, and urgency.' }
+        ].map((feature, idx) => (
+          <div key={idx} className="bubble-effect" style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)', flex: '1', minWidth: '250px', maxWidth: '320px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+            <div style={{ fontSize: '36px', marginBottom: '12px' }}>{feature.icon}</div>
+            <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '17px', fontWeight: 'bold' }}>{feature.title}</h4>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: '1.6' }}>{feature.desc}</p>
+          </div>
+        ))}
       </section>
 
       <section className="bottom-grid">
@@ -372,7 +386,9 @@ export default function App() {
           <div className="mini-steps-grid">
             {STEPS.map((s, idx) => (
               <div key={idx} className="mini-step-card bubble-effect">
-                <div className="mini-step-img">✅</div>
+                <div className="mini-step-img" style={{ display: 'flex', justifyContent: 'center' }}>
+                  <img src={s.img} alt={s.step} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                </div>
                 <div className="mini-step-text"><strong>{s.step}</strong><p>{s.desc}</p></div>
               </div>
             ))}
