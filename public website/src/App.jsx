@@ -61,8 +61,8 @@ export default function App() {
   const [selectedService, setSelectedService] = useState('plumber');
   const [searchStatus, setSearchStatus] = useState('searching');
   
-  // --- NEW STATE: SIMULATED WORKER APP ---
-  const [showWorkerPopup, setShowWorkerPopup] = useState(false);
+  // --- CUSTOMER LOGIN TOKEN ---
+  const [customerToken, setCustomerToken] = useState(null);
 
   // --- Worker registration state ---
   const [regStep, setRegStep] = useState(1);
@@ -77,6 +77,20 @@ export default function App() {
     eshram_uan: '', id_last4: '',
   });
   const [certificatePhoto, setCertificatePhoto] = useState(null); 
+
+  // --- LOG IN CUSTOMER AUTOMATICALLY ---
+  useEffect(() => {
+    fetch('https://seva-api-1uco.onrender.com/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '9222222210', password: 'pass123' }) 
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.token) setCustomerToken(data.token);
+    })
+    .catch(err => console.error("Auto-login failed", err));
+  }, []);
 
   function updateWorkerForm(field, value) {
     setWorkerForm((f) => ({ ...f, [field]: value }));
@@ -98,7 +112,7 @@ export default function App() {
       setCategories(cats);
       setSocieties(socs);
     } catch (err) {
-      setRegError('Could not load service categories — is the backend reachable?');
+      setRegError('Could not load service categories');
     }
   }
 
@@ -149,10 +163,6 @@ export default function App() {
     setRegError('');
     if (!workerForm.category_id || !workerForm.society_id) {
       setRegError('Please select a service category and a society.');
-      return;
-    }
-    if (workerForm.eshram_uan && !/^\d{12}$/.test(workerForm.eshram_uan)) {
-      setRegError('e-Shram UAN must be exactly 12 digits.');
       return;
     }
     setRegLoading(true);
@@ -217,26 +227,62 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentView, isEmergency]);
 
-  // --- NEW BOOKING LOGIC ---
-  const handleBookSubmit = () => {
+  // --- REAL LIVE BOOKING LOGIC ---
+  const handleBookSubmit = async () => {
+    if (!customerToken) {
+      alert("Connecting to server, please wait a second and try again.");
+      return;
+    }
+
     setCurrentView('searching');
     setSearchStatus('searching');
     
-    // Instead of automatically continuing, we pop up the Worker Simulator after 1.5 seconds!
-    setTimeout(() => {
-      setShowWorkerPopup(true);
-    }, 1500);
-  };
+    try {
+      // 1. Send the booking to the LIVE backend
+      const res = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${customerToken}`
+        },
+        body: JSON.stringify({
+          category_id: 1, 
+          lat: 20.4620,   
+          lng: 85.8820,   
+          address_text: "Customer Location (Demo)",
+          is_emergency: isEmergency ? 1 : 0
+        })
+      });
+      
+      const newBooking = await res.json();
+      
+      if (!newBooking.id) {
+        console.error("Booking failed:", newBooking);
+        return;
+      }
 
-  // --- NEW WORKER ACCEPT LOGIC ---
-  const handleWorkerAccept = () => {
-    setShowWorkerPopup(false); // Hide the phone simulator
-    setSearchStatus('found'); // Show the green checkmark to customer
-    
-    // 1.5 seconds later, map opens
-    setTimeout(() => {
-      setCurrentView('tracking');
-    }, 1500);
+      // 2. Poll the server waiting for EXPO GO to accept
+      const checkInterval = setInterval(async () => {
+        const statusRes = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
+          headers: { 'Authorization': `Bearer ${customerToken}` }
+        });
+        const bookings = await statusRes.json();
+        const currentBooking = bookings.find(b => b.id === newBooking.id);
+        
+        // Wait for Expo Go status to become 'accepted'
+        if (currentBooking && currentBooking.status === 'accepted') {
+          clearInterval(checkInterval); 
+          setSearchStatus('found');     
+          
+          setTimeout(() => {
+            setCurrentView('tracking'); 
+          }, 1500);
+        }
+      }, 2000);
+
+    } catch (error) {
+      console.error("Booking error:", error);
+    }
   };
 
   const renderHome = () => (
@@ -358,13 +404,13 @@ export default function App() {
             <div className="loading-spinner"></div>
             <h2 style={{marginTop: '24px'}}>AI Dispatch Active</h2>
             <p>Locating the nearest verified {selectedService}...</p>
-            <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>(Waiting for worker to accept...)</p>
+            <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>(Check your Expo app to accept the job!)</p>
           </>
         ) : (
           <>
             <div className="success-checkmark">✅</div>
             <h2 style={{marginTop: '24px'}}>Worker Assigned!</h2>
-            <p>Ramesh has accepted your request. Loading live tracking...</p>
+            <p>Worker has accepted your request. Loading live tracking...</p>
           </>
         )}
       </div>
@@ -396,7 +442,7 @@ export default function App() {
               </Marker>
 
               <Marker position={workerPos} icon={activeWorkerIcon}>
-                <Popup>Ramesh (Assigned to you)</Popup>
+                <Popup>Assigned Worker</Popup>
               </Marker>
 
               {availableWorkers.map((pos, idx) => (
@@ -410,7 +456,7 @@ export default function App() {
           <div className="worker-profile-card">
             <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Worker" className="worker-avatar" />
             <div className="worker-details">
-              <h4>Ramesh Kumar</h4>
+              <h4>Verified Worker</h4>
               <p className="capitalize">⭐ 4.9 (120 Jobs) • Verified {selectedService}</p>
               <span className="coop-badge">Cooperative Member (100% Payout)</span>
             </div>
@@ -419,12 +465,12 @@ export default function App() {
 
         <div className="tracking-right">
           <div className="chat-interface">
-            <div className="chat-header-small">Live Chat with Ramesh</div>
+            <div className="chat-header-small">Live Chat with Worker</div>
             <div className="chat-body">
-              <div className="chat-msg system-msg">System: Found {availableWorkers.length + 1} nearby workers. AI Matched you with Ramesh based on real-time location.</div>
-              {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Ramesh is dropping current tasks to reach you.</div>}
+              <div className="chat-msg system-msg">System: Found {availableWorkers.length + 1} nearby workers. AI Matched you with a worker based on real-time location.</div>
+              {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Worker is dropping current tasks to reach you.</div>}
               <div className="chat-msg worker-msg">
-                <strong>Ramesh:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
+                <strong>Worker:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
               </div>
             </div>
             <div className="chat-input-area">
@@ -573,21 +619,7 @@ export default function App() {
         </nav>
       </header>
 
-      {/* NEW: THE WORKER APP SIMULATOR POPUP */}
-      {showWorkerPopup && (
-        <div className="worker-simulator-popup fade-in">
-          <div className="worker-sim-header">📱 WORKER APP (Simulated)</div>
-          <div className="worker-sim-body">
-            <h4 style={{margin: '0 0 10px 0', color: '#f97316'}}>New {isEmergency ? '🚨 Emergency' : ''} Job Request!</h4>
-            <p style={{margin: '5px 0'}}><strong>Service:</strong> {selectedService.toUpperCase()}</p>
-            <p style={{margin: '5px 0'}}><strong>Location:</strong> Bhubaneswar</p>
-            <p style={{margin: '5px 0'}}><strong>Est. Payout:</strong> ₹450 (100% to you)</p>
-            <button className="worker-sim-btn bubble-effect" onClick={handleWorkerAccept}>
-              ACCEPT JOB
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ALL FAKE POPUP CODE IS COMPLETELY DELETED HERE */}
 
       {currentView === 'home' && renderHome()}
       {currentView === 'booking' && renderBooking()}
