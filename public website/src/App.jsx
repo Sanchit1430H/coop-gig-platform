@@ -450,7 +450,7 @@ export default function App() {
       </section>
 
       {/* --- NEW SOFT BLUE BACKGROUND WRAPPER --- */}
-      <div style={{ backgroundColor: '#f4f8fb', paddingBottom: '60px', paddingTop: '1px' }}>
+      <div style={{ background: 'linear-gradient(to bottom, #ffffff 0%, #f4f8fb 150px)', paddingBottom: '60px', paddingTop: '1px' }}>
         
         {/* Floating Feature Cards */}
         <section style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '0 20px', position: 'relative', zIndex: 10, flexWrap: 'wrap', maxWidth: '1200px', margin: '-50px auto 60px auto' }}>
