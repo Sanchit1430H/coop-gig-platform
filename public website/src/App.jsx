@@ -23,11 +23,25 @@ const CATEGORY_ICONS = {
   cleaner: '🧹', painting: '🎨', house: '🏠', pest: '🐛', handyman: '🛠️'
 };
 
+// --- NEW: DISPLAY NAMES (Keeps backend logic safe while looking premium) ---
+const CATEGORY_LABELS = {
+  plumber: 'Plumbing & Leak Solutions',
+  electrician: 'Electrical & Wiring Services',
+  carpenter: 'Carpentry & Custom Woodwork',
+  mason: 'Masonry & Concrete Works',
+  cleaner: 'Deep Cleaning & Sanitization',
+  painting: 'Professional Home Painting',
+  house: 'House & Property Care',
+  pest: 'Pest Control Management',
+  handyman: 'General Home Maintenance'
+};
+
+// --- UPDATED: PREMIUM STEPS COPY ---
 const STEPS = [
-  { step: 'Step 1', desc: 'Find service and book', img: '/step1.png' },
-  { step: 'Step 2', desc: 'Worker is verified', img: '/step2.png' },
-  { step: 'Step 3', desc: 'Job gets completed', img: '/step3.png' },
-  { step: 'Step 4', desc: 'Direct, fair pay', img: '/step4.png' },
+  { step: 'Step 1: Select Your Service', desc: 'Choose what you need from our comprehensive list of household and commercial services.', img: '/step1.png' },
+  { step: 'Step 2: AI-Driven Matching', desc: 'Our smart engine locates and dispatches the closest top-rated professional to your doorstep.', img: '/step2.png' },
+  { step: 'Step 3: Quality Execution', desc: 'Sit back as our verified experts complete the job with professional-grade efficiency.', img: '/step3.png' },
+  { step: 'Step 4: Direct Settlement', desc: 'Pay the professional directly upon completion. No hidden platform charges, no middleman fees.', img: '/step4.png' },
 ];
 
 const Testimonials = () => {
@@ -61,16 +75,13 @@ export default function App() {
   const [selectedService, setSelectedService] = useState('plumber');
   const [searchStatus, setSearchStatus] = useState('searching');
   
-  // --- CUSTOMER LOGIN STATE ---
   const [customerToken, setCustomerToken] = useState(null);
   const [loginPhone, setLoginPhone] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   
-  // --- DYNAMIC WORKER DETAILS ---
   const [assignedWorker, setAssignedWorker] = useState(null);
 
-  // --- Worker registration state ---
   const [regStep, setRegStep] = useState(1);
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -83,6 +94,12 @@ export default function App() {
     eshram_uan: '', id_last4: '',
   });
   const [certificatePhoto, setCertificatePhoto] = useState(null); 
+
+  const [statusPhone, setStatusPhone] = useState('');
+  const [statusPassword, setStatusPassword] = useState('');
+  const [statusResult, setStatusResult] = useState(null); 
+  const [statusMessage, setStatusMessage] = useState('');
+  const [statusLoading, setStatusLoading] = useState(false);
 
   function updateWorkerForm(field, value) {
     setWorkerForm((f) => ({ ...f, [field]: value }));
@@ -98,7 +115,6 @@ export default function App() {
     reader.readAsDataURL(file);
   }
 
-  // --- THE ONLY FUNCTION CHANGED TO FIX THE WHITE SCREEN ---
   async function loadCategoriesAndSocieties(token) {
     try {
       const catRes = await fetch('https://seva-api-1uco.onrender.com/api/categories');
@@ -107,7 +123,6 @@ export default function App() {
       const socRes = await fetch('https://seva-api-1uco.onrender.com/api/societies');
       const socs = await socRes.json();
       
-      // THE FIX: If the database didn't send a real list, FORCE the failsafe to run!
       if (!Array.isArray(cats) || !Array.isArray(socs)) {
          throw new Error("Backend did not send an array, triggering failsafe...");
       }
@@ -116,7 +131,6 @@ export default function App() {
       setSocieties(socs);
     } catch (err) {
       console.log("Backend data invalid, using fallback data to prevent crash!");
-      // Failsafe: Populates the dropdowns perfectly so the demo never crashes
       setCategories([
         { id: 1, name: 'plumber' }, 
         { id: 2, name: 'electrician' }, 
@@ -150,7 +164,6 @@ export default function App() {
     }, 900);
   }
 
-  // --- FIXED WORKER REGISTRATION (Uses fetch directly) ---
   async function handleAccountStep(e) {
     e.preventDefault();
     setRegError('');
@@ -198,7 +211,6 @@ export default function App() {
     try {
       const token = sessionStorage.getItem('worker_reg_token');
       
-      // --- THE FIX: Direct fetch instead of using the broken api helper ---
       const res = await fetch('https://seva-api-1uco.onrender.com/api/workers', {
         method: 'POST', 
         headers: { 
@@ -221,7 +233,6 @@ export default function App() {
       if (!res.ok || data.error) {
         throw new Error(data.error || 'Failed to submit worker profile.');
       }
-      // -------------------------------------------------------------------
 
       sessionStorage.removeItem('worker_reg_token');
       runVerificationAnimation(() => setRegStep(3));
@@ -231,6 +242,41 @@ export default function App() {
       setRegLoading(false);
     }
   }
+
+  const handleStatusCheck = async (e) => {
+    e.preventDefault();
+    setStatusResult(null);
+    setStatusLoading(true);
+
+    try {
+      const res = await fetch('https://seva-api-1uco.onrender.com/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: statusPhone, password: statusPassword })
+      });
+      const data = await res.json();
+
+      setTimeout(() => {
+        if (data.token) {
+          setStatusResult('approved');
+        } else {
+          const errMsg = data.error?.toLowerCase() || '';
+          if (errMsg.includes('pending') || errMsg.includes('verify') || errMsg.includes('active') || errMsg.includes('approve')) {
+            setStatusResult('pending');
+          } else {
+            setStatusResult('error');
+            setStatusMessage(data.error || 'Invalid credentials or account not found.');
+          }
+        }
+        setStatusLoading(false);
+      }, 1200);
+
+    } catch (err) {
+      setStatusResult('error');
+      setStatusMessage('Could not connect to server.');
+      setStatusLoading(false);
+    }
+  };
 
   const routeCoords = [
     [20.3150, 85.8050],
@@ -273,7 +319,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentView, isEmergency]);
 
-  // --- CUSTOMER LOGIN SUBMIT ---
   const handleCustomerLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -296,7 +341,6 @@ export default function App() {
     }
   };
 
-// --- REAL LIVE BOOKING & POLLING LOGIC ---
   const handleBookSubmit = async () => {
     if (!customerToken) {
       setCurrentView('customer-login');
@@ -306,7 +350,6 @@ export default function App() {
     setCurrentView('searching');
     setSearchStatus('searching');
     
-    // Map the dropdown text to your actual database Category IDs
     const categoryMap = {
       plumber: 1,
       electrician: 2,
@@ -379,15 +422,20 @@ export default function App() {
       <section className="hero-section">
         <div className="hero-overlay"></div>
         <div className="hero-content">
-          <h1 className="slide-up-fade">Find Verified Workers Instantly.</h1>
-          <p className="slide-up-fade" style={{animationDelay: '0.2s'}}>Zero commissions. Fair pay for workers, fast service for you.</p>
+          <h1 className="slide-up-fade">Bridging the Gap Between Skill and Opportunity.</h1>
+          <p className="slide-up-fade" style={{animationDelay: '0.2s', maxWidth: '800px', margin: '0 auto 30px', fontSize: '18px'}}>
+            Kushal-Setu is India’s first zero-commission, AI-powered service platform. We connect you instantly with e-Shram verified professionals—ensuring 100% fair wages for workers and reliable, safe service for you.
+          </p>
+          <div style={{fontSize: '14px', color: '#cbd5e1', marginBottom: '20px', animationDelay: '0.3s', fontWeight: 'bold'}} className="slide-up-fade">
+             🇮🇳 Aligned with Digital India &nbsp;|&nbsp; 100% Govt. ID Verified &nbsp;|&nbsp; Zero Middleman Fees
+          </div>
 
           <div className="search-bar bubble-effect" style={{animationDelay: '0.4s'}}>
             <div className="search-input-group">
               <span className="search-icon">🔍</span>
               <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
                 {Object.keys(CATEGORY_ICONS).map(name => (
-                  <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
+                  <option key={name} value={name}>{CATEGORY_LABELS[name]}</option>
                 ))}
               </select>
             </div>
@@ -401,12 +449,11 @@ export default function App() {
         </div>
       </section>
 
-      {/* --- MISSING FEATURES SECTION RESTORED --- */}
       <section style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '0 20px', marginTop: '-50px', position: 'relative', zIndex: 10, flexWrap: 'wrap', maxWidth: '1200px', margin: '-50px auto 40px auto' }}>
         {[
-          { icon: '🤝', title: 'Fair-Share Cooperative', desc: '100% pay to the worker. Built on a cooperative model eliminating middleman margins.' },
-          { icon: '🏛️', title: 'Government Verified', desc: 'Every single worker is strictly background checked via the national e-Shram database.' },
-          { icon: '🤖', title: 'AI Dispatch Engine', desc: 'Our intelligent algorithm automatically matches you based on skill, proximity, and urgency.' }
+          { icon: '🤝', title: 'Empowering Through 0% Commission', desc: 'We believe in financial dignity. Unlike traditional agencies that take massive cuts, 100% of your payment goes directly to the worker.' },
+          { icon: '🏛️', title: 'Uncompromising Safety (e-Shram Integrated)', desc: 'Trust is our foundation. Every professional on our platform is authenticated through the Government of India’s e-Shram database for secure, reliable service.' },
+          { icon: '🤖', title: 'AI-Powered Smart Dispatch', desc: 'No more waiting. Our proprietary matching algorithm instantly connects your service request with the nearest skilled professional based on real-time availability and ratings.' }
         ].map((feature, idx) => (
           <div key={idx} className="bubble-effect" style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)', flex: '1', minWidth: '250px', maxWidth: '320px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>{feature.icon}</div>
@@ -418,7 +465,7 @@ export default function App() {
 
       <section className="bottom-grid">
         <div className="column-section">
-          <h4>Featured Service Category</h4>
+          <h4>Professional Service Categories</h4>
           <div className="mini-category-grid">
             {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
               <div key={name} className="mini-category-chip bubble-effect" onClick={() => { 
@@ -426,7 +473,7 @@ export default function App() {
                   customerToken ? setCurrentView('booking') : setCurrentView('customer-login'); 
                 }}>
                 <span className="mini-icon">{icon}</span>
-                <span className="mini-name capitalize">{name}</span>
+                <span className="mini-name" style={{fontSize: '12px', textAlign: 'center', marginTop: '8px', lineHeight: '1.2'}}>{CATEGORY_LABELS[name]}</span>
               </div>
             ))}
           </div>
@@ -442,6 +489,21 @@ export default function App() {
                 <div className="mini-step-text"><strong>{s.step}</strong><p>{s.desc}</p></div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* --- NEW: THE IMPACT SECTION --- */}
+      <section style={{ padding: '60px 20px', backgroundColor: '#f8fafc', textAlign: 'center' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '32px', color: '#0f172a', marginBottom: '20px' }}>Formalizing India’s Unorganized Sector</h2>
+          <p style={{ fontSize: '18px', color: '#475569', lineHeight: '1.8', marginBottom: '40px' }}>
+            There are over 280 million unorganized workers in India. Kushal-Setu is not just a booking platform; it is a socio-economic movement. By removing predatory commissions and digitizing local trade skills, we are building a fairer, more transparent gig economy for the future of India.
+          </p>
+          <div style={{ padding: '40px', backgroundColor: '#0f172a', borderRadius: '16px', color: 'white' }}>
+            <h3 style={{ fontSize: '24px', marginBottom: '15px' }}>Ready to experience the future of home services?</h3>
+            <p style={{ color: '#94a3b8', marginBottom: '25px' }}>Support fair trade. Get your household tasks done securely and efficiently today.</p>
+            <button className="confirm-btn btn-orange" style={{ maxWidth: '300px', margin: '0 auto' }} onClick={() => customerToken ? setCurrentView('booking') : setCurrentView('customer-login')}>Find Your Expert Now</button>
           </div>
         </div>
       </section>
@@ -485,9 +547,9 @@ export default function App() {
         
         <div className="form-group">
           <label>Service Required</label>
-          <select className="form-input capitalize" value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
+          <select className="form-input" value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
             {Object.keys(CATEGORY_ICONS).map(name => (
-              <option key={name} value={name}>{name.charAt(0).toUpperCase() + name.slice(1)}</option>
+              <option key={name} value={name}>{CATEGORY_LABELS[name]}</option>
             ))}
           </select>
         </div>
@@ -522,7 +584,7 @@ export default function App() {
         </div>
 
         <button className={`confirm-btn ${isEmergency ? 'btn-red' : 'btn-orange'}`} onClick={handleBookSubmit}>
-          {isEmergency ? `Dispatch Emergency ${selectedService} Now` : "Confirm Standard Booking"}
+          {isEmergency ? `Dispatch Emergency ${CATEGORY_LABELS[selectedService]} Now` : "Confirm Standard Booking"}
         </button>
       </div>
     </div>
@@ -535,7 +597,7 @@ export default function App() {
           <>
             <div className="loading-spinner"></div>
             <h2 style={{marginTop: '24px'}}>AI Dispatch Active</h2>
-            <p>Locating the nearest verified {selectedService}...</p>
+            <p>Locating the nearest verified professional...</p>
             <p style={{fontSize: '13px', color: '#f97316', marginTop: '10px', fontWeight: 'bold'}}>Waiting for worker to accept on their app...</p>
           </>
         ) : (
@@ -590,7 +652,7 @@ export default function App() {
             <div className="worker-details">
               <h4>{assignedWorker?.name || "Verified Worker"}</h4>
               {assignedWorker?.phone && <p style={{margin: '2px 0'}}>📞 {assignedWorker.phone}</p>}
-              <p className="capitalize">⭐ 4.9 (120 Jobs) • Verified {selectedService}</p>
+              <p>⭐ 4.9 (120 Jobs) • Verified {CATEGORY_LABELS[selectedService]}</p>
               <span className="coop-badge">Cooperative Member (100% Payout)</span>
             </div>
           </div>
@@ -603,7 +665,7 @@ export default function App() {
               <div className="chat-msg system-msg">System: Found nearby workers. AI Matched you with a worker based on real-time location.</div>
               {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Worker is dropping current tasks to reach you.</div>}
               <div className="chat-msg worker-msg">
-                <strong>Worker:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
+                <strong>Worker:</strong> Hello! I have received your request for {CATEGORY_LABELS[selectedService]}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
               </div>
             </div>
             <div className="chat-input-area">
@@ -631,7 +693,7 @@ export default function App() {
 
         {regStep === 1 && (
           <form onSubmit={handleAccountStep}>
-            <h2>Become a Worker</h2>
+            <h2>Become a Worker Partner</h2>
             <p>Join through your local labour cooperative. Step 1 of 2: create your account.</p>
 
             <div className="form-group">
@@ -739,6 +801,59 @@ export default function App() {
     </div>
   );
 
+  const renderCheckStatus = () => (
+    <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <div className="booking-card" style={{ maxWidth: '400px', width: '100%' }}>
+        <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
+        <h2>Check Application Status</h2>
+        <p>Enter your details to see if your cooperative society has verified your profile.</p>
+
+        <form onSubmit={handleStatusCheck}>
+          <div className="form-group">
+            <label>Phone Number</label>
+            <input className="form-input" placeholder="e.g. 9444444444" value={statusPhone} onChange={(e) => setStatusPhone(e.target.value)} required />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input type="password" className="form-input" placeholder="Enter password" value={statusPassword} onChange={(e) => setStatusPassword(e.target.value)} required />
+          </div>
+
+          {statusLoading && (
+            <div style={{ textAlign: 'center', padding: '10px' }}>
+              <div className="loading-spinner" style={{ width: '24px', height: '24px', borderWidth: '3px' }}></div>
+              <p style={{ fontSize: '13px', color: '#64748b', marginTop: '10px' }}>Querying Federation Database...</p>
+            </div>
+          )}
+
+          {!statusLoading && statusResult === 'approved' && (
+            <div className="fade-in" style={{ padding: '15px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '15px', border: '1px solid #bbf7d0' }}>
+              <strong>✅ Approved & Active!</strong><br/>
+              Your profile is fully verified. You can now log into the Kushal-Setu Mobile App to start receiving jobs.
+            </div>
+          )}
+
+          {!statusLoading && statusResult === 'pending' && (
+            <div className="fade-in" style={{ padding: '15px', backgroundColor: '#fef9c3', color: '#854d0e', borderRadius: '8px', marginBottom: '15px', border: '1px solid #fef08a' }}>
+              <strong>⏳ Pending Verification</strong><br/>
+              Your application is currently under review by your local cooperative society. Please check back later!
+            </div>
+          )}
+
+          {!statusLoading && statusResult === 'error' && (
+            <div className="fade-in" style={{ padding: '15px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '8px', marginBottom: '15px', border: '1px solid #fecaca' }}>
+              <strong>❌ Error</strong><br/>
+              {statusMessage}
+            </div>
+          )}
+
+          <button type="submit" className="confirm-btn btn-orange" disabled={statusLoading}>
+            {statusLoading ? 'Checking...' : 'Check Status'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
   return (
     <div className="site">
       <header className="topbar">
@@ -748,8 +863,9 @@ export default function App() {
         </div>
         <nav className="topnav">
           <a href="#services" onClick={() => setCurrentView('home')}>Services ▾</a>
-          <a href="#become-worker" onClick={() => { setRegStep(1); setCurrentView('register-worker'); }}>Become a Worker</a>
-          {/* TOP RIGHT LOGIN BUTTON LOGIC */}
+          <a href="#become-worker" onClick={() => { setRegStep(1); setCurrentView('register-worker'); }}>Become a Worker Partner</a>
+          <a href="#check-status" onClick={() => { setStatusResult(null); setCurrentView('check-status'); }}>Check Status</a>
+          
           {!customerToken ? (
             <button className="nav-btn-orange bubble-effect" onClick={() => setCurrentView('customer-login')}>Login to Book</button>
           ) : (
@@ -765,6 +881,7 @@ export default function App() {
       {currentView === 'searching' && renderSearching()}
       {currentView === 'tracking' && renderTracking()}
       {currentView === 'register-worker' && renderWorkerRegister()}
+      {currentView === 'check-status' && renderCheckStatus()}
       
       {currentView === 'home' && (
         <footer className="dark-footer">
