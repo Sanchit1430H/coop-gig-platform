@@ -61,8 +61,14 @@ export default function App() {
   const [selectedService, setSelectedService] = useState('plumber');
   const [searchStatus, setSearchStatus] = useState('searching');
   
-  // --- CUSTOMER LOGIN TOKEN ---
+  // --- CUSTOMER LOGIN STATE ---
   const [customerToken, setCustomerToken] = useState(null);
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  
+  // --- DYNAMIC WORKER DETAILS ---
+  const [assignedWorker, setAssignedWorker] = useState(null);
 
   // --- Worker registration state ---
   const [regStep, setRegStep] = useState(1);
@@ -77,20 +83,6 @@ export default function App() {
     eshram_uan: '', id_last4: '',
   });
   const [certificatePhoto, setCertificatePhoto] = useState(null); 
-
-  // --- LOG IN CUSTOMER AUTOMATICALLY ---
-  useEffect(() => {
-    fetch('https://seva-api-1uco.onrender.com/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '9222222210', password: 'pass123' }) 
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.token) setCustomerToken(data.token);
-    })
-    .catch(err => console.error("Auto-login failed", err));
-  }, []);
 
   function updateWorkerForm(field, value) {
     setWorkerForm((f) => ({ ...f, [field]: value }));
@@ -227,13 +219,31 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentView, isEmergency]);
 
-  // --- REAL LIVE BOOKING LOGIC ---
-  const handleBookSubmit = async () => {
-    if (!customerToken) {
-      alert("Connecting to server, please wait a second and try again.");
-      return;
+  // --- CUSTOMER LOGIN SUBMIT ---
+  const handleCustomerLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    try {
+      const res = await fetch('https://seva-api-1uco.onrender.com/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: loginPhone, password: loginPassword }) 
+      });
+      const data = await res.json();
+      
+      if (data.token) {
+        setCustomerToken(data.token);
+        setCurrentView('booking'); // Successfully logged in -> Move to Booking Form
+      } else {
+        setLoginError(data.error || 'Login failed. Check your credentials.');
+      }
+    } catch (err) {
+      setLoginError('Could not connect to server.');
     }
+  };
 
+  // --- REAL LIVE BOOKING & POLLING LOGIC ---
+  const handleBookSubmit = async () => {
     setCurrentView('searching');
     setSearchStatus('searching');
     
@@ -246,8 +256,8 @@ export default function App() {
           'Authorization': `Bearer ${customerToken}`
         },
         body: JSON.stringify({
-          category_id: 1, 
-          lat: 20.4620,   
+          category_id: 1, // Note: Set this to match the worker logged into Expo Go
+          lat: 20.4620,   // GPS coordinates near Expo app default
           lng: 85.8820,   
           address_text: "Customer Location (Demo)",
           is_emergency: isEmergency ? 1 : 0
@@ -269,14 +279,21 @@ export default function App() {
         const bookings = await statusRes.json();
         const currentBooking = bookings.find(b => b.id === newBooking.id);
         
-        // Wait for Expo Go status to become 'accepted'
-        if (currentBooking && currentBooking.status === 'accepted') {
-          clearInterval(checkInterval); 
-          setSearchStatus('found');     
-          
-          setTimeout(() => {
-            setCurrentView('tracking'); 
-          }, 1500);
+        if (currentBooking) {
+          // Worker hit accept on Expo App!
+          if (currentBooking.status === 'accepted' || currentBooking.status === 'in_progress') {
+            clearInterval(checkInterval); 
+            
+            // Try to extract the assigned worker's name/details if the backend provides it
+            if (currentBooking.worker) {
+               setAssignedWorker(currentBooking.worker);
+            }
+            
+            setSearchStatus('found');     
+            setTimeout(() => {
+              setCurrentView('tracking'); // Move to dispatch page
+            }, 1500);
+          }
         }
       }, 2000);
 
@@ -284,6 +301,8 @@ export default function App() {
       console.error("Booking error:", error);
     }
   };
+
+  // --- VIEWS ---
 
   const renderHome = () => (
     <>
@@ -307,7 +326,8 @@ export default function App() {
               <span className="search-icon">📍</span>
               <input type="text" placeholder="Enter your city (e.g. Bhubaneswar)" />
             </div>
-            <button className="search-btn bubble-effect" onClick={() => setCurrentView('booking')}>Search & Book</button>
+            {/* If logged in -> go to booking. If not -> go to login */}
+            <button className="search-btn bubble-effect" onClick={() => customerToken ? setCurrentView('booking') : setCurrentView('customer-login')}>Search & Book</button>
           </div>
         </div>
       </section>
@@ -317,7 +337,10 @@ export default function App() {
           <h4>Featured Service Category</h4>
           <div className="mini-category-grid">
             {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
-              <div key={name} className="mini-category-chip bubble-effect" onClick={() => { setSelectedService(name); setCurrentView('booking'); }}>
+              <div key={name} className="mini-category-chip bubble-effect" onClick={() => { 
+                  setSelectedService(name); 
+                  customerToken ? setCurrentView('booking') : setCurrentView('customer-login'); 
+                }}>
                 <span className="mini-icon">{icon}</span>
                 <span className="mini-name capitalize">{name}</span>
               </div>
@@ -342,6 +365,29 @@ export default function App() {
         <Testimonials />
       </section>
     </>
+  );
+
+  const renderCustomerLogin = () => (
+    <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <div className="booking-card" style={{ maxWidth: '400px', width: '100%' }}>
+        <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
+        <h2>Customer Login</h2>
+        <p>Please log in to your account to book a service.</p>
+        
+        <form onSubmit={handleCustomerLoginSubmit}>
+          <div className="form-group">
+            <label>Phone Number</label>
+            <input className="form-input" placeholder="e.g. 9222222210" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} required />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input type="password" className="form-input" placeholder="Enter password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+          </div>
+          {loginError && <p className="reg-error">{loginError}</p>}
+          <button type="submit" className="confirm-btn btn-orange">Log In & Continue</button>
+        </form>
+      </div>
+    </div>
   );
 
   const renderBooking = () => (
@@ -404,7 +450,7 @@ export default function App() {
             <div className="loading-spinner"></div>
             <h2 style={{marginTop: '24px'}}>AI Dispatch Active</h2>
             <p>Locating the nearest verified {selectedService}...</p>
-            <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>(Check your Expo app to accept the job!)</p>
+            <p style={{fontSize: '13px', color: '#f97316', marginTop: '10px', fontWeight: 'bold'}}>Waiting for worker to accept on their app...</p>
           </>
         ) : (
           <>
@@ -456,7 +502,8 @@ export default function App() {
           <div className="worker-profile-card">
             <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Worker" className="worker-avatar" />
             <div className="worker-details">
-              <h4>Verified Worker</h4>
+              <h4>{assignedWorker?.name || "Verified Worker"}</h4>
+              {assignedWorker?.phone && <p style={{margin: '2px 0'}}>📞 {assignedWorker.phone}</p>}
               <p className="capitalize">⭐ 4.9 (120 Jobs) • Verified {selectedService}</p>
               <span className="coop-badge">Cooperative Member (100% Payout)</span>
             </div>
@@ -467,7 +514,7 @@ export default function App() {
           <div className="chat-interface">
             <div className="chat-header-small">Live Chat with Worker</div>
             <div className="chat-body">
-              <div className="chat-msg system-msg">System: Found {availableWorkers.length + 1} nearby workers. AI Matched you with a worker based on real-time location.</div>
+              <div className="chat-msg system-msg">System: Found nearby workers. AI Matched you with a worker based on real-time location.</div>
               {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Worker is dropping current tasks to reach you.</div>}
               <div className="chat-msg worker-msg">
                 <strong>Worker:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
@@ -615,13 +662,18 @@ export default function App() {
         <nav className="topnav">
           <a href="#services" onClick={() => setCurrentView('home')}>Services ▾</a>
           <a href="#become-worker" onClick={() => { setRegStep(1); setCurrentView('register-worker'); }}>Become a Worker</a>
-          <button className="nav-btn-orange bubble-effect" onClick={() => setCurrentView('booking')}>Post a Request</button>
+          {/* TOP RIGHT LOGIN BUTTON LOGIC */}
+          {!customerToken ? (
+            <button className="nav-btn-orange bubble-effect" onClick={() => setCurrentView('customer-login')}>Login to Book</button>
+          ) : (
+            <button className="nav-btn-orange bubble-effect" style={{backgroundColor: '#22c55e'}} onClick={() => setCurrentView('booking')}>Post a Request</button>
+          )}
         </nav>
       </header>
 
-      {/* ALL FAKE POPUP CODE IS COMPLETELY DELETED HERE */}
-
+      {/* RENDER THE CORRECT VIEW */}
       {currentView === 'home' && renderHome()}
+      {currentView === 'customer-login' && renderCustomerLogin()}
       {currentView === 'booking' && renderBooking()}
       {currentView === 'searching' && renderSearching()}
       {currentView === 'tracking' && renderTracking()}
