@@ -242,11 +242,31 @@ export default function App() {
     }
   };
 
-  // --- REAL LIVE BOOKING & POLLING LOGIC ---
+// --- REAL LIVE BOOKING & POLLING LOGIC ---
   const handleBookSubmit = async () => {
+    if (!customerToken) {
+      setCurrentView('customer-login');
+      return;
+    }
+
     setCurrentView('searching');
     setSearchStatus('searching');
     
+    // Map the dropdown text to your actual database Category IDs
+    const categoryMap = {
+      plumber: 1,
+      electrician: 2,
+      carpenter: 3,
+      mason: 4,
+      cleaner: 5,
+      painting: 6,
+      house: 7,
+      pest: 8,
+      handyman: 9
+    };
+
+    const actualCategoryId = categoryMap[selectedService] || 1;
+
     try {
       // 1. Send the booking to the LIVE backend
       const res = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
@@ -256,7 +276,7 @@ export default function App() {
           'Authorization': `Bearer ${customerToken}`
         },
         body: JSON.stringify({
-          category_id: 1, // Note: Set this to match the worker logged into Expo Go
+          category_id: actualCategoryId, // NOW IT SENDS THE REAL CATEGORY!
           lat: 20.4620,   // GPS coordinates near Expo app default
           lng: 85.8820,   
           address_text: "Customer Location (Demo)",
