@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../api/client';
+import { request } from '../api/client';
 
 // Default demo location: Cuttack, Odisha — matches the seeded worker data.
 // Swap for expo-location's getCurrentPositionAsync() when testing on a real
@@ -21,13 +21,18 @@ export default function BookServiceScreen({ route, navigation }) {
   async function handleBook() {
     setLoading(true);
     try {
-      const result = await api.createBooking(token, {
-        category_id: category.id,
-        is_emergency: isEmergency,
-        scheduled_at: isEmergency ? null : new Date(Date.now() + 3600 * 1000).toISOString(),
-        customer_lat: parseFloat(lat),
-        customer_lng: parseFloat(lng),
-        address_text: address || 'Not specified',
+      // Sending the gig request to the backend[cite: 4]
+      const result = await request('/bookings', {
+        method: 'POST',
+        token: token,
+        body: {
+          category_id: category.id,
+          is_emergency: isEmergency,
+          scheduled_at: isEmergency ? null : new Date(Date.now() + 3600 * 1000).toISOString(),
+          customer_lat: parseFloat(lat),
+          customer_lng: parseFloat(lng),
+          address_text: address || 'Not specified',
+        }
       });
 
       if (result.booking.status === 'no_match') {

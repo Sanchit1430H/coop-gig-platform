@@ -27,7 +27,7 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
-        <h1>Seva-E-Akramikta</h1>
+        <h1>Kushal-Setu</h1>
         <p className="subtitle">Cooperative Admin Dashboard</p>
 
         <label>Phone number</label>

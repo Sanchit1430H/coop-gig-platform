@@ -3,9 +3,8 @@
 // must replace this with your laptop's LAN IP (e.g. http://192.168.1.5:4000)
 // or your deployed Render/Railway URL once the backend is hosted.
 // Android emulator: use http://10.0.2.2:4000 instead.
-export const API_BASE = 'http://10.139.213.195:4000/api';
-
-async function request(path, { method = 'GET', token, body } = {}) {
+export const API_BASE = 'https://seva-api-1uco.onrender.com/api';
+export async function request(path, { method = 'GET', token, body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 

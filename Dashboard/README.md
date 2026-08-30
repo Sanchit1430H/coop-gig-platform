@@ -1,4 +1,4 @@
-# Seva-E-Akramikta — Admin Dashboard (Federation/Society)
+# Kushal-Setu — Admin Dashboard (Federation/Society)
 
 React web app (Vite) for federation and society admins.
 

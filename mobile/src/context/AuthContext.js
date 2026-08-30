@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '../api/client';
+import { request } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -31,13 +31,23 @@ export function AuthProvider({ children }) {
   }
 
   async function login(phone, password) {
-    const data = await api.login({ phone, password });
+    // Sends the POST request to your backend's login endpoint
+    const data = await request('/auth/login', {
+      method: 'POST',
+      body: { phone, password }
+    });
+    
     await persist(data.user, data.token);
     return data.user;
   }
 
   async function register(payload) {
-    const data = await api.register(payload);
+    // Sends the POST request to your backend's register endpoint
+    const data = await request('/auth/register', {
+      method: 'POST',
+      body: payload
+    });
+    
     await persist(data.user, data.token);
     return data.user;
   }

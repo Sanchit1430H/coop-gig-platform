@@ -23,7 +23,7 @@ export default function Layout() {
     <div className="layout">
       <aside className="sidebar">
         <div className="brand">
-          <h2>Seva-E-Akramikta</h2>
+          <h2>Kushal-Setu</h2>
           <span>Cooperative Admin</span>
         </div>
         <nav>
