@@ -676,8 +676,9 @@ export default function App() {
   return (
     <div className="site">
       <header className="topbar">
-        <div className="brand-mark" style={{ fontWeight: 'bold', fontSize: '20px', cursor: 'pointer' }} onClick={() => setCurrentView('home')}>
-          <span style={{color: '#f97316'}}>⚡</span> Kushal-Setu
+        <div className="brand-mark" style={{ fontWeight: 'bold', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} onClick={() => setCurrentView('home')}>
+          <img src="/logo.jpg" alt="KS Logo" style={{ height: '42px', borderRadius: '8px' }} />
+          Kushal-Setu
         </div>
         <nav className="topnav">
           <a href="#services" onClick={() => setCurrentView('home')}>Services ▾</a>
