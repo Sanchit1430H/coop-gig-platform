@@ -494,7 +494,7 @@ export default function App() {
       </section>
 
       {/* --- REDESIGNED PREMIUM IMPACT SECTION --- */}
-      <section style={{ padding: '80px 20px', backgroundColor: '#ffffff', textAlign: 'center', borderTop: '1px solid #f8fafc', borderBottom: '1px solid #f8fafc' }}>
+      <section style={{ padding: '80px 20px', backgroundColor: '#f0f6fc', textAlign: 'center', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '840px', margin: '0 auto' }}>
           
           {/* Subtle Orange Accent Line */}
