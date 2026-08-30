@@ -98,7 +98,8 @@ export default function App() {
     reader.readAsDataURL(file);
   }
 
- async function loadCategoriesAndSocieties(token) {
+  // --- THE ONLY FUNCTION CHANGED TO FIX THE WHITE SCREEN ---
+  async function loadCategoriesAndSocieties(token) {
     try {
       const catRes = await fetch('https://seva-api-1uco.onrender.com/api/categories');
       const cats = await catRes.json();
@@ -106,11 +107,16 @@ export default function App() {
       const socRes = await fetch('https://seva-api-1uco.onrender.com/api/societies');
       const socs = await socRes.json();
       
+      // THE FIX: If the database didn't send a real list, FORCE the failsafe to run!
+      if (!Array.isArray(cats) || !Array.isArray(socs)) {
+         throw new Error("Backend did not send an array, triggering failsafe...");
+      }
+      
       setCategories(cats);
       setSocieties(socs);
     } catch (err) {
-      console.log("Backend fetch failed, using fallback data for demo");
-      // Failsafe: If the backend is asleep, populate these anyway so the demo doesn't crash!
+      console.log("Backend data invalid, using fallback data to prevent crash!");
+      // Failsafe: Populates the dropdowns perfectly so the demo never crashes
       setCategories([
         { id: 1, name: 'plumber' }, 
         { id: 2, name: 'electrician' }, 
