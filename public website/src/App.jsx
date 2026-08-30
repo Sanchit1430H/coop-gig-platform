@@ -449,50 +449,60 @@ export default function App() {
         </div>
       </section>
 
-      <section style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '0 20px', marginTop: '-50px', position: 'relative', zIndex: 10, flexWrap: 'wrap', maxWidth: '1200px', margin: '-50px auto 40px auto' }}>
-        {[
-          { icon: '🤝', title: 'Empowering Through 0% Commission', desc: 'We believe in financial dignity. Unlike traditional agencies that take massive cuts, 100% of your payment goes directly to the worker.' },
-          { icon: '🏛️', title: 'Uncompromising Safety (e-Shram Integrated)', desc: 'Trust is our foundation. Every professional on our platform is authenticated through the Government of India’s e-Shram database for secure, reliable service.' },
-          { icon: '🤖', title: 'AI-Powered Smart Dispatch', desc: 'No more waiting. Our proprietary matching algorithm instantly connects your service request with the nearest skilled professional based on real-time availability and ratings.' }
-        ].map((feature, idx) => (
-          <div key={idx} className="bubble-effect" style={{ backgroundColor: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)', flex: '1', minWidth: '250px', maxWidth: '320px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>{feature.icon}</div>
-            <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '17px', fontWeight: 'bold' }}>{feature.title}</h4>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: '1.6' }}>{feature.desc}</p>
-          </div>
-        ))}
-      </section>
+      {/* --- NEW SOFT BLUE BACKGROUND WRAPPER --- */}
+      <div style={{ backgroundColor: '#f4f8fb', paddingBottom: '60px', paddingTop: '1px' }}>
+        
+        {/* Floating Feature Cards */}
+        <section style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '0 20px', position: 'relative', zIndex: 10, flexWrap: 'wrap', maxWidth: '1200px', margin: '-50px auto 60px auto' }}>
+          {[
+            { icon: '🤝', title: 'Empowering Through 0% Commission', desc: 'We believe in financial dignity. Unlike traditional agencies that take massive cuts, 100% of your payment goes directly to the worker.' },
+            { icon: '🏛️', title: 'Uncompromising Safety (e-Shram Integrated)', desc: 'Trust is our foundation. Every professional on our platform is authenticated through the Government of India’s e-Shram database for secure, reliable service.' },
+            { icon: '🤖', title: 'AI-Powered Smart Dispatch', desc: 'No more waiting. Our proprietary matching algorithm instantly connects your service request with the nearest skilled professional based on real-time availability and ratings.' }
+          ].map((feature, idx) => (
+            <div key={idx} className="bubble-effect" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04)', flex: '1', minWidth: '250px', maxWidth: '320px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>{feature.icon}</div>
+              <h4 style={{ margin: '0 0 10px 0', color: '#0f172a', fontSize: '17px', fontWeight: 'bold' }}>{feature.title}</h4>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: '1.6' }}>{feature.desc}</p>
+            </div>
+          ))}
+        </section>
 
-      <section className="bottom-grid">
-        <div className="column-section">
-          <h4>Professional Service Categories</h4>
-          <div className="mini-category-grid">
-            {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
-              <div key={name} className="mini-category-chip bubble-effect" onClick={() => { 
-                  setSelectedService(name); 
-                  customerToken ? setCurrentView('booking') : setCurrentView('customer-login'); 
-                }}>
-                <span className="mini-icon">{icon}</span>
-                <span className="mini-name" style={{fontSize: '12px', textAlign: 'center', marginTop: '8px', lineHeight: '1.2'}}>{CATEGORY_LABELS[name]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="column-section">
-          <h4>How It Works</h4>
-          <div className="mini-steps-grid">
-            {STEPS.map((s, idx) => (
-              <div key={idx} className="mini-step-card bubble-effect">
-                <div className="mini-step-img" style={{ display: 'flex', justifyContent: 'center' }}>
-                  <img src={s.img} alt={s.step} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+        {/* Bottom Grid (Categories and Steps) */}
+        <section className="bottom-grid" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+          <div className="column-section">
+            <h4 style={{ color: '#0f172a', fontWeight: '800' }}>Professional Service Categories</h4>
+            <div className="mini-category-grid">
+              {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
+                <div key={name} className="mini-category-chip bubble-effect" style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }} onClick={() => { 
+                    setSelectedService(name); 
+                    customerToken ? setCurrentView('booking') : setCurrentView('customer-login'); 
+                  }}>
+                  <span className="mini-icon">{icon}</span>
+                  <span className="mini-name" style={{fontSize: '12px', textAlign: 'center', marginTop: '8px', lineHeight: '1.2', color: '#334155', fontWeight: '600'}}>{CATEGORY_LABELS[name]}</span>
                 </div>
-                <div className="mini-step-text"><strong>{s.step}</strong><p>{s.desc}</p></div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-
+          
+          <div className="column-section">
+            <h4 style={{ color: '#0f172a', fontWeight: '800' }}>How It Works</h4>
+            <div className="mini-steps-grid">
+              {STEPS.map((s, idx) => (
+                <div key={idx} className="mini-step-card bubble-effect" style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                  <div className="mini-step-img" style={{ display: 'flex', justifyContent: 'center' }}>
+                    <img src={s.img} alt={s.step} style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                  </div>
+                  <div className="mini-step-text">
+                    <strong style={{ color: '#0f172a' }}>{s.step}</strong>
+                    <p style={{ color: '#64748b' }}>{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+      {/* --- END SOFT BLUE BACKGROUND WRAPPER --- */}
       {/* --- REDESIGNED PREMIUM IMPACT SECTION --- */}
       <section style={{ padding: '80px 20px', backgroundColor: '#f0f6fc', textAlign: 'center', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '840px', margin: '0 auto' }}>
