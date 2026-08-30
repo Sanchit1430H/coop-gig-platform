@@ -61,6 +61,125 @@ export default function App() {
   const [selectedService, setSelectedService] = useState('plumber');
   const [searchStatus, setSearchStatus] = useState('searching');
 
+  // --- Worker registration state ---
+  const [regStep, setRegStep] = useState(1); // 1 = account, 2 = profile, 'verifying' = animation, 3 = success
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
+  const [verifyMessage, setVerifyMessage] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [societies, setSocieties] = useState([]);
+  const [workerForm, setWorkerForm] = useState({
+    name: '', phone: '', password: '',
+    category_id: '', society_id: '', experience_years: '', bio: '',
+    eshram_uan: '', id_last4: '',
+  });
+  const [certificatePhoto, setCertificatePhoto] = useState(null); // { previewUrl, base64 }
+
+  function updateWorkerForm(field, value) {
+    setWorkerForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function handleCertificateFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCertificatePhoto({ previewUrl: URL.createObjectURL(file), base64: reader.result });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function loadCategoriesAndSocieties(token) {
+    try {
+      const [cats, socs] = await Promise.all([api.getCategories(token), api.getSocieties(token)]);
+      setCategories(cats);
+      setSocieties(socs);
+    } catch (err) {
+      setRegError('Could not load service categories — is the backend reachable?');
+    }
+  }
+
+  // Purely cosmetic sequence for the demo — the REAL work (creating the
+  // account + worker profile) already happened via the api calls above by
+  // the time this runs. This just gives the pitch a visual "checking"
+  // moment before landing on the success screen. It does not call e-Shram
+  // or any external service — see the code comment on eshram_uan
+  // elsewhere in this file for why no such public API exists to call.
+  function runVerificationAnimation(onDone) {
+    const messages = [
+      'Verifying e-Shram UAN…',
+      'Cross-checking cooperative society records…',
+      'Finalizing application…',
+    ];
+    setRegStep('verifying');
+    let i = 0;
+    setVerifyMessage(messages[0]);
+    const interval = setInterval(() => {
+      i++;
+      if (i >= messages.length) {
+        clearInterval(interval);
+        onDone();
+        return;
+      }
+      setVerifyMessage(messages[i]);
+    }, 900);
+  }
+
+  async function handleAccountStep(e) {
+    e.preventDefault();
+    setRegError('');
+    if (!workerForm.name || !workerForm.phone || !workerForm.password) {
+      setRegError('Name, phone, and password are required.');
+      return;
+    }
+    setRegLoading(true);
+    try {
+      const data = await api.register({
+        name: workerForm.name, phone: workerForm.phone, password: workerForm.password, role: 'worker',
+      });
+      sessionStorage.setItem('worker_reg_token', data.token);
+      await loadCategoriesAndSocieties(data.token);
+      setRegStep(2);
+    } catch (err) {
+      setRegError(err.message);
+    } finally {
+      setRegLoading(false);
+    }
+  }
+
+  async function handleProfileStep(e) {
+    e.preventDefault();
+    setRegError('');
+    if (!workerForm.category_id || !workerForm.society_id) {
+      setRegError('Please select a service category and a society.');
+      return;
+    }
+    if (workerForm.eshram_uan && !/^\d{12}$/.test(workerForm.eshram_uan)) {
+      setRegError('e-Shram UAN must be exactly 12 digits.');
+      return;
+    }
+    setRegLoading(true);
+    try {
+      const token = sessionStorage.getItem('worker_reg_token');
+      await api.createWorkerProfile(token, {
+        category_id: parseInt(workerForm.category_id, 10),
+        society_id: parseInt(workerForm.society_id, 10),
+        experience_years: workerForm.experience_years ? parseFloat(workerForm.experience_years) : 0,
+        bio: workerForm.bio || undefined,
+        eshram_uan: workerForm.eshram_uan || undefined,
+        id_last4: workerForm.id_last4 || undefined,
+        certificate_photo_base64: certificatePhoto?.base64,
+      });
+      sessionStorage.removeItem('worker_reg_token');
+      runVerificationAnimation(() => setRegStep(3));
+    } catch (err) {
+      setRegError(err.message);
+    } finally {
+      setRegLoading(false);
+    }
+  }
+
+
   const routeCoords = [
     [20.3150, 85.8050],
     [20.3110, 85.8050],
@@ -312,6 +431,129 @@ export default function App() {
     </div>
   );
 
+  const renderWorkerRegister = () => (
+    <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center' }}>
+      <div className="booking-card" style={{ maxWidth: '480px', width: '100%' }}>
+        <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
+
+        {(regStep === 1 || regStep === 2) && (
+          <div className="reg-step-indicator">
+            <span className={regStep === 1 ? 'reg-step-active' : 'reg-step-done'}>1. Account</span>
+            <span className="reg-step-divider">—</span>
+            <span className={regStep === 2 ? 'reg-step-active' : ''}>2. Worker Profile</span>
+          </div>
+        )}
+
+        {regStep === 1 && (
+          <form onSubmit={handleAccountStep}>
+            <h2>Become a Worker</h2>
+            <p>Join through your local labour cooperative. Step 1 of 2: create your account.</p>
+
+            <div className="form-group">
+              <label>Full Name</label>
+              <input className="form-input" value={workerForm.name} onChange={(e) => updateWorkerForm('name', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input className="form-input" value={workerForm.phone} onChange={(e) => updateWorkerForm('phone', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input type="password" className="form-input" value={workerForm.password} onChange={(e) => updateWorkerForm('password', e.target.value)} />
+            </div>
+
+            {regError && <p className="reg-error">{regError}</p>}
+            <button type="submit" className="confirm-btn btn-orange" disabled={regLoading}>
+              {regLoading ? 'Creating account…' : 'Continue'}
+            </button>
+          </form>
+        )}
+
+        {regStep === 2 && (
+          <form onSubmit={handleProfileStep}>
+            <h2>Worker Profile</h2>
+            <p>Step 2 of 2: your trade details. Your application goes to your cooperative society for verification.</p>
+
+            <div className="form-group">
+              <label>Service Category</label>
+              <select className="form-input capitalize" value={workerForm.category_id} onChange={(e) => updateWorkerForm('category_id', e.target.value)}>
+                <option value="">Select a category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Cooperative Society</label>
+              <select className="form-input" value={workerForm.society_id} onChange={(e) => updateWorkerForm('society_id', e.target.value)}>
+                <option value="">Select your society</option>
+                {societies.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} — {s.city}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Years of Experience</label>
+                <input type="number" className="form-input" value={workerForm.experience_years} onChange={(e) => updateWorkerForm('experience_years', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>e-Shram UAN (optional)</label>
+                <input className="form-input" placeholder="12-digit number" value={workerForm.eshram_uan} onChange={(e) => updateWorkerForm('eshram_uan', e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Short Bio</label>
+              <input className="form-input" placeholder="e.g. 5 years residential wiring experience" value={workerForm.bio} onChange={(e) => updateWorkerForm('bio', e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>ID last 4 digits (optional — never share your full ID number)</label>
+              <input className="form-input" maxLength={4} placeholder="e.g. 4321" value={workerForm.id_last4} onChange={(e) => updateWorkerForm('id_last4', e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Upload a certificate or ID photo (optional)</label>
+              <input type="file" accept="image/*" onChange={handleCertificateFile} />
+              {certificatePhoto && <img src={certificatePhoto.previewUrl} alt="Certificate preview" className="reg-photo-preview" />}
+            </div>
+
+            <p className="reg-disclaimer">
+              We don't verify your e-Shram UAN against a live government database — it's recorded as
+              provided and your cooperative society will verify your details directly.
+            </p>
+
+            {regError && <p className="reg-error">{regError}</p>}
+            <button type="submit" className="confirm-btn btn-orange" disabled={regLoading}>
+              {regLoading ? 'Submitting…' : 'Submit Application'}
+            </button>
+          </form>
+        )}
+
+        {regStep === 'verifying' && (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>{verifyMessage}</p>
+          </div>
+        )}
+
+        {regStep === 3 && (
+          <div style={{ textAlign: 'center' }}>
+            <div className="success-checkmark">✅</div>
+            <h2 style={{ marginTop: '24px' }}>Application Submitted!</h2>
+            <p>Your cooperative society will review your details and verify your profile. You'll be able to log in and start accepting jobs once approved.</p>
+            <button className="confirm-btn btn-orange" style={{ marginTop: '20px' }} onClick={() => setCurrentView('home')}>
+              Back to Home
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="site">
       <header className="topbar">
@@ -320,6 +562,7 @@ export default function App() {
         </div>
         <nav className="topnav">
           <a href="#services" onClick={() => setCurrentView('home')}>Services ▾</a>
+          <a href="#become-worker" onClick={() => { setRegStep(1); setCurrentView('register-worker'); }}>Become a Worker</a>
           <button className="nav-btn-orange bubble-effect" onClick={() => setCurrentView('booking')}>Post a Request</button>
         </nav>
       </header>
@@ -328,6 +571,7 @@ export default function App() {
       {currentView === 'booking' && renderBooking()}
       {currentView === 'searching' && renderSearching()}
       {currentView === 'tracking' && renderTracking()}
+      {currentView === 'register-worker' && renderWorkerRegister()}
       
       {currentView === 'home' && (
         <footer className="dark-footer">
