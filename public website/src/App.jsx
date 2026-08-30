@@ -60,9 +60,12 @@ export default function App() {
   const [isEmergency, setIsEmergency] = useState(false);
   const [selectedService, setSelectedService] = useState('plumber');
   const [searchStatus, setSearchStatus] = useState('searching');
+  
+  // --- NEW STATE: SIMULATED WORKER APP ---
+  const [showWorkerPopup, setShowWorkerPopup] = useState(false);
 
   // --- Worker registration state ---
-  const [regStep, setRegStep] = useState(1); // 1 = account, 2 = profile, 'verifying' = animation, 3 = success
+  const [regStep, setRegStep] = useState(1);
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
   const [verifyMessage, setVerifyMessage] = useState('');
@@ -73,7 +76,7 @@ export default function App() {
     category_id: '', society_id: '', experience_years: '', bio: '',
     eshram_uan: '', id_last4: '',
   });
-  const [certificatePhoto, setCertificatePhoto] = useState(null); // { previewUrl, base64 }
+  const [certificatePhoto, setCertificatePhoto] = useState(null); 
 
   function updateWorkerForm(field, value) {
     setWorkerForm((f) => ({ ...f, [field]: value }));
@@ -99,12 +102,6 @@ export default function App() {
     }
   }
 
-  // Purely cosmetic sequence for the demo — the REAL work (creating the
-  // account + worker profile) already happened via the api calls above by
-  // the time this runs. This just gives the pitch a visual "checking"
-  // moment before landing on the success screen. It does not call e-Shram
-  // or any external service — see the code comment on eshram_uan
-  // elsewhere in this file for why no such public API exists to call.
   function runVerificationAnimation(onDone) {
     const messages = [
       'Verifying e-Shram UAN…',
@@ -179,7 +176,6 @@ export default function App() {
     }
   }
 
-
   const routeCoords = [
     [20.3150, 85.8050],
     [20.3110, 85.8050],
@@ -221,16 +217,26 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentView, isEmergency]);
 
+  // --- NEW BOOKING LOGIC ---
   const handleBookSubmit = () => {
     setCurrentView('searching');
     setSearchStatus('searching');
     
+    // Instead of automatically continuing, we pop up the Worker Simulator after 1.5 seconds!
     setTimeout(() => {
-      setSearchStatus('found');
-      setTimeout(() => {
-        setCurrentView('tracking');
-      }, 1500);
-    }, 3500);
+      setShowWorkerPopup(true);
+    }, 1500);
+  };
+
+  // --- NEW WORKER ACCEPT LOGIC ---
+  const handleWorkerAccept = () => {
+    setShowWorkerPopup(false); // Hide the phone simulator
+    setSearchStatus('found'); // Show the green checkmark to customer
+    
+    // 1.5 seconds later, map opens
+    setTimeout(() => {
+      setCurrentView('tracking');
+    }, 1500);
   };
 
   const renderHome = () => (
@@ -285,7 +291,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* RESTORED TESTIMONIALS SECTION */}
       <section className="testimonials-section">
         <h2>What Our Customers Say</h2>
         <Testimonials />
@@ -353,6 +358,7 @@ export default function App() {
             <div className="loading-spinner"></div>
             <h2 style={{marginTop: '24px'}}>AI Dispatch Active</h2>
             <p>Locating the nearest verified {selectedService}...</p>
+            <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>(Waiting for worker to accept...)</p>
           </>
         ) : (
           <>
@@ -566,6 +572,22 @@ export default function App() {
           <button className="nav-btn-orange bubble-effect" onClick={() => setCurrentView('booking')}>Post a Request</button>
         </nav>
       </header>
+
+      {/* NEW: THE WORKER APP SIMULATOR POPUP */}
+      {showWorkerPopup && (
+        <div className="worker-simulator-popup fade-in">
+          <div className="worker-sim-header">📱 WORKER APP (Simulated)</div>
+          <div className="worker-sim-body">
+            <h4 style={{margin: '0 0 10px 0', color: '#f97316'}}>New {isEmergency ? '🚨 Emergency' : ''} Job Request!</h4>
+            <p style={{margin: '5px 0'}}><strong>Service:</strong> {selectedService.toUpperCase()}</p>
+            <p style={{margin: '5px 0'}}><strong>Location:</strong> Bhubaneswar</p>
+            <p style={{margin: '5px 0'}}><strong>Est. Payout:</strong> ₹450 (100% to you)</p>
+            <button className="worker-sim-btn bubble-effect" onClick={handleWorkerAccept}>
+              ACCEPT JOB
+            </button>
+          </div>
+        </div>
+      )}
 
       {currentView === 'home' && renderHome()}
       {currentView === 'booking' && renderBooking()}
