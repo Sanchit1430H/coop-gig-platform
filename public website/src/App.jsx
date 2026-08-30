@@ -33,7 +33,9 @@ const STEPS = [
 const Testimonials = () => {
   const reviews = [
     { id: 1, name: "Priya S.", location: "Bhubaneswar", rating: "⭐⭐⭐⭐⭐", text: "The electrician arrived in 20 minutes. Finally a platform where I know the worker is actually getting the full amount I pay!" },
-    { id: 2, name: "Rahul M.", location: "Rourkela", rating: "⭐⭐⭐⭐⭐", text: "Booked a plumber through Kushal-Setu. The AI dispatch matched me perfectly. Excellent service and zero hidden fees." }
+    { id: 2, name: "Rahul M.", location: "Rourkela", rating: "⭐⭐⭐⭐⭐", text: "Booked a plumber through Kushal-Setu. The AI dispatch matched me perfectly. Excellent service and zero hidden fees." },
+    { id: 3, name: "Anjali D.", location: "Cuttack", rating: "⭐⭐⭐⭐", text: "I love the cooperative model. The carpenter was highly skilled and very professional. Will definitely use this again." },
+    { id: 4, name: "Vikram K.", location: "Bhubaneswar", rating: "⭐⭐⭐⭐⭐", text: "Incredible app! The house cleaner was verified and did a spotless job. The direct pay feature is a game changer." }
   ];
 
   return (
@@ -57,84 +59,191 @@ export default function App() {
   const [currentView, setCurrentView] = useState('home');
   const [isEmergency, setIsEmergency] = useState(false);
   const [selectedService, setSelectedService] = useState('plumber');
+  const [searchStatus, setSearchStatus] = useState('searching');
   
-  // Searching phases: 'searching' -> 'assigned' -> 'accepted'
-  const [searchPhase, setSearchPhase] = useState('searching');
-  const [assignedWorkerName, setAssignedWorkerName] = useState('Ramesh');
-  
-  // --- AUTHENTICATION STATE ---
-  const [authUser, setAuthUser] = useState(null); // { role: 'customer' | 'worker', token: '...', name: '...' }
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginTab, setLoginTab] = useState('customer');
-  const [loginPhone, setLoginPhone] = useState('9222222210');
-  const [loginPassword, setLoginPassword] = useState('pass123');
+  // --- CUSTOMER LOGIN TOKEN ---
+  const [customerToken, setCustomerToken] = useState(null);
 
   // --- Worker registration state ---
   const [regStep, setRegStep] = useState(1);
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
-  const [workerForm, setWorkerForm] = useState({ name: '', phone: '', password: '' });
+  const [verifyMessage, setVerifyMessage] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [societies, setSocieties] = useState([]);
+  const [workerForm, setWorkerForm] = useState({
+    name: '', phone: '', password: '',
+    category_id: '', society_id: '', experience_years: '', bio: '',
+    eshram_uan: '', id_last4: '',
+  });
+  const [certificatePhoto, setCertificatePhoto] = useState(null); 
 
-  // Worker Dashboard State
-  const [pendingJobs, setPendingJobs] = useState([]);
+  // --- LOG IN CUSTOMER AUTOMATICALLY ---
+  useEffect(() => {
+    fetch('https://seva-api-1uco.onrender.com/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '9222222210', password: 'pass123' }) 
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.token) setCustomerToken(data.token);
+    })
+    .catch(err => console.error("Auto-login failed", err));
+  }, []);
 
-  // --- LOGIN LOGIC ---
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  function updateWorkerForm(field, value) {
+    setWorkerForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function handleCertificateFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCertificatePhoto({ previewUrl: URL.createObjectURL(file), base64: reader.result });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function loadCategoriesAndSocieties(token) {
     try {
-      // Use your live API, or mock it for the demo if you prefer
-      const res = await fetch('https://seva-api-1uco.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: loginPhone, password: loginPassword }) 
-      });
-      const data = await res.json();
-      
-      if (data.token) {
-        setAuthUser({ 
-          role: loginTab, 
-          token: data.token, 
-          name: loginTab === 'worker' ? 'Ramesh' : 'Customer' 
-        });
-        setShowLoginModal(false);
-        if (loginTab === 'worker') setCurrentView('worker-dashboard');
-      } else {
-        alert("Login failed: " + (data.message || "Invalid credentials"));
-      }
+      const [cats, socs] = await Promise.all([api.getCategories(token), api.getSocieties(token)]);
+      setCategories(cats);
+      setSocieties(socs);
     } catch (err) {
-      console.error("Login error", err);
-      // Fallback for presentation if server is asleep
-      setAuthUser({ role: loginTab, token: 'mock-token-123', name: loginTab === 'worker' ? 'Ramesh' : 'Customer' });
-      setShowLoginModal(false);
-      if (loginTab === 'worker') setCurrentView('worker-dashboard');
+      setRegError('Could not load service categories');
     }
-  };
+  }
 
-  const handleLogout = () => {
-    setAuthUser(null);
-    setCurrentView('home');
-  };
+  function runVerificationAnimation(onDone) {
+    const messages = [
+      'Verifying e-Shram UAN…',
+      'Cross-checking cooperative society records…',
+      'Finalizing application…',
+    ];
+    setRegStep('verifying');
+    let i = 0;
+    setVerifyMessage(messages[0]);
+    const interval = setInterval(() => {
+      i++;
+      if (i >= messages.length) {
+        clearInterval(interval);
+        onDone();
+        return;
+      }
+      setVerifyMessage(messages[i]);
+    }, 900);
+  }
 
-  const handleBookClick = () => {
-    if (!authUser || authUser.role !== 'customer') {
-      setLoginTab('customer');
-      setShowLoginModal(true);
-    } else {
-      setCurrentView('booking');
+  async function handleAccountStep(e) {
+    e.preventDefault();
+    setRegError('');
+    if (!workerForm.name || !workerForm.phone || !workerForm.password) {
+      setRegError('Name, phone, and password are required.');
+      return;
     }
-  };
+    setRegLoading(true);
+    try {
+      const data = await api.register({
+        name: workerForm.name, phone: workerForm.phone, password: workerForm.password, role: 'worker',
+      });
+      sessionStorage.setItem('worker_reg_token', data.token);
+      await loadCategoriesAndSocieties(data.token);
+      setRegStep(2);
+    } catch (err) {
+      setRegError(err.message);
+    } finally {
+      setRegLoading(false);
+    }
+  }
+
+  async function handleProfileStep(e) {
+    e.preventDefault();
+    setRegError('');
+    if (!workerForm.category_id || !workerForm.society_id) {
+      setRegError('Please select a service category and a society.');
+      return;
+    }
+    setRegLoading(true);
+    try {
+      const token = sessionStorage.getItem('worker_reg_token');
+      await api.createWorkerProfile(token, {
+        category_id: parseInt(workerForm.category_id, 10),
+        society_id: parseInt(workerForm.society_id, 10),
+        experience_years: workerForm.experience_years ? parseFloat(workerForm.experience_years) : 0,
+        bio: workerForm.bio || undefined,
+        eshram_uan: workerForm.eshram_uan || undefined,
+        id_last4: workerForm.id_last4 || undefined,
+        certificate_photo_base64: certificatePhoto?.base64,
+      });
+      sessionStorage.removeItem('worker_reg_token');
+      runVerificationAnimation(() => setRegStep(3));
+    } catch (err) {
+      setRegError(err.message);
+    } finally {
+      setRegLoading(false);
+    }
+  }
+
+  const routeCoords = [
+    [20.3150, 85.8050],
+    [20.3110, 85.8050],
+    [20.3050, 85.8050],
+    [20.3050, 85.8110],
+    [20.3050, 85.8180],
+    [20.3000, 85.8180],
+    [20.2960, 85.8180],
+    [20.2960, 85.8210],
+    [20.2960, 85.8245]
+  ];
+  const customerGPS = routeCoords[routeCoords.length - 1];
+
+  const [workerPos, setWorkerPos] = useState(routeCoords[0]);
+
+  const availableWorkers = [
+    [20.3010, 85.8300],
+    [20.2850, 85.8150],
+    [20.2920, 85.8400],
+    [20.3050, 85.8100]
+  ];
+
+  useEffect(() => {
+    let interval;
+    if (currentView === 'tracking') {
+      let currentIndex = 0;
+      setWorkerPos(routeCoords[0]);
+      const pollRate = isEmergency ? 1500 : 2500;
+      
+      interval = setInterval(() => {
+        currentIndex++;
+        if (currentIndex >= routeCoords.length) {
+          clearInterval(interval);
+        } else {
+          setWorkerPos(routeCoords[currentIndex]);
+        }
+      }, pollRate);
+    }
+    return () => clearInterval(interval);
+  }, [currentView, isEmergency]);
 
   // --- REAL LIVE BOOKING LOGIC ---
   const handleBookSubmit = async () => {
+    if (!customerToken) {
+      alert("Connecting to server, please wait a second and try again.");
+      return;
+    }
+
     setCurrentView('searching');
-    setSearchPhase('searching');
+    setSearchStatus('searching');
     
     try {
+      // 1. Send the booking to the LIVE backend
       const res = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authUser.token}`
+          'Authorization': `Bearer ${customerToken}`
         },
         body: JSON.stringify({
           category_id: 1, 
@@ -147,26 +256,24 @@ export default function App() {
       
       const newBooking = await res.json();
       
-      // Phase 1: Wait 3 seconds, then pretend we found a worker
-      setTimeout(() => {
-        setAssignedWorkerName('Ramesh (Plumber)');
-        setSearchPhase('assigned');
-      }, 3000);
+      if (!newBooking.id) {
+        console.error("Booking failed:", newBooking);
+        return;
+      }
 
-      // Phase 2: Poll server waiting for Worker to accept
+      // 2. Poll the server waiting for EXPO GO to accept
       const checkInterval = setInterval(async () => {
         const statusRes = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
-          headers: { 'Authorization': `Bearer ${authUser.token}` }
+          headers: { 'Authorization': `Bearer ${customerToken}` }
         });
         const bookings = await statusRes.json();
+        const currentBooking = bookings.find(b => b.id === newBooking.id);
         
-        // Handle array or single object depending on your API
-        const bookingList = Array.isArray(bookings) ? bookings : [bookings];
-        const currentBooking = bookingList.find(b => b.id === (newBooking.id || b.id));
-        
+        // Wait for Expo Go status to become 'accepted'
         if (currentBooking && currentBooking.status === 'accepted') {
           clearInterval(checkInterval); 
-          setSearchPhase('accepted');     
+          setSearchStatus('found');     
+          
           setTimeout(() => {
             setCurrentView('tracking'); 
           }, 1500);
@@ -178,75 +285,15 @@ export default function App() {
     }
   };
 
-  // --- WORKER DASHBOARD LOGIC ---
-  const fetchPendingJobs = async () => {
-    if (!authUser || authUser.role !== 'worker') return;
-    try {
-      const res = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
-        headers: { 'Authorization': `Bearer ${authUser.token}` }
-      });
-      const data = await res.json();
-      const bookings = Array.isArray(data) ? data : [data];
-      setPendingJobs(bookings.filter(b => b.status === 'pending' || b.status === 'searching' || !b.status));
-    } catch (err) {
-      console.error("Failed to fetch jobs", err);
-    }
-  };
-
-  useEffect(() => {
-    if (currentView === 'worker-dashboard') {
-      fetchPendingJobs();
-      const interval = setInterval(fetchPendingJobs, 3000); // Auto-refresh jobs
-      return () => clearInterval(interval);
-    }
-  }, [currentView, authUser]);
-
-  const acceptJob = async (jobId) => {
-    try {
-      // Adjust this URL/Method to match your backend's accept logic
-      await fetch(`https://seva-api-1uco.onrender.com/api/bookings/${jobId}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authUser.token}`
-        },
-        body: JSON.stringify({ status: 'accepted' })
-      });
-      fetchPendingJobs();
-      alert("Job Accepted! Customer is now being routed to tracking page.");
-    } catch (err) {
-      console.error("Failed to accept job", err);
-    }
-  };
-
-  // --- MAP TRACKING LOGIC ---
-  const routeCoords = [[20.3150, 85.8050], [20.3110, 85.8050], [20.3050, 85.8050], [20.3050, 85.8110], [20.2960, 85.8245]];
-  const [workerPos, setWorkerPos] = useState(routeCoords[0]);
-
-  useEffect(() => {
-    let interval;
-    if (currentView === 'tracking') {
-      let currentIndex = 0;
-      setWorkerPos(routeCoords[0]);
-      interval = setInterval(() => {
-        currentIndex++;
-        if (currentIndex >= routeCoords.length) clearInterval(interval);
-        else setWorkerPos(routeCoords[currentIndex]);
-      }, isEmergency ? 1500 : 2500);
-    }
-    return () => clearInterval(interval);
-  }, [currentView, isEmergency]);
-
-  // --- VIEWS ---
   const renderHome = () => (
     <>
       <section className="hero-section">
         <div className="hero-overlay"></div>
         <div className="hero-content">
           <h1 className="slide-up-fade">Find Verified Workers Instantly.</h1>
-          <p className="slide-up-fade">Zero commissions. Fair pay for workers, fast service for you.</p>
+          <p className="slide-up-fade" style={{animationDelay: '0.2s'}}>Zero commissions. Fair pay for workers, fast service for you.</p>
 
-          <div className="search-bar bubble-effect">
+          <div className="search-bar bubble-effect" style={{animationDelay: '0.4s'}}>
             <div className="search-input-group">
               <span className="search-icon">🔍</span>
               <select value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
@@ -255,10 +302,41 @@ export default function App() {
                 ))}
               </select>
             </div>
-            <button className="search-btn bubble-effect" onClick={handleBookClick}>Search & Book</button>
+            <div className="search-divider"></div>
+            <div className="search-input-group">
+              <span className="search-icon">📍</span>
+              <input type="text" placeholder="Enter your city (e.g. Bhubaneswar)" />
+            </div>
+            <button className="search-btn bubble-effect" onClick={() => setCurrentView('booking')}>Search & Book</button>
           </div>
         </div>
       </section>
+
+      <section className="bottom-grid">
+        <div className="column-section">
+          <h4>Featured Service Category</h4>
+          <div className="mini-category-grid">
+            {Object.entries(CATEGORY_ICONS).map(([name, icon]) => (
+              <div key={name} className="mini-category-chip bubble-effect" onClick={() => { setSelectedService(name); setCurrentView('booking'); }}>
+                <span className="mini-icon">{icon}</span>
+                <span className="mini-name capitalize">{name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="column-section">
+          <h4>How It Works</h4>
+          <div className="mini-steps-grid">
+            {STEPS.map((s, idx) => (
+              <div key={idx} className="mini-step-card bubble-effect">
+                <div className="mini-step-img">✅</div>
+                <div className="mini-step-text"><strong>{s.step}</strong><p>{s.desc}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="testimonials-section">
         <h2>What Our Customers Say</h2>
         <Testimonials />
@@ -271,6 +349,8 @@ export default function App() {
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
       <div className="booking-card">
         <h2>Book a Service</h2>
+        <p>Fill out the details below. Workers get 100% of the booking fee.</p>
+        
         <div className="form-group">
           <label>Service Required</label>
           <select className="form-input capitalize" value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
@@ -279,8 +359,38 @@ export default function App() {
             ))}
           </select>
         </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>Date</label>
+            <input type="date" className="form-input" />
+          </div>
+          <div className="form-group">
+            <label>Time</label>
+            <input type="time" className="form-input" />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Exact Location</label>
+          <input type="text" className="form-input" placeholder="e.g. Patia, Bhubaneswar" />
+        </div>
+
+        <div className={`emergency-box ${isEmergency ? 'emergency-active' : ''}`}>
+          <div className="emergency-header">
+            <div>
+              <strong>🚨 Emergency Booking?</strong>
+              <p>Need someone right now? AI will bypass scheduling and dispatch the nearest active worker.</p>
+            </div>
+            <label className="toggle-switch">
+              <input type="checkbox" checked={isEmergency} onChange={(e) => setIsEmergency(e.target.checked)} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+        </div>
+
         <button className={`confirm-btn ${isEmergency ? 'btn-red' : 'btn-orange'}`} onClick={handleBookSubmit}>
-          Confirm Booking
+          {isEmergency ? `Dispatch Emergency ${selectedService} Now` : "Confirm Standard Booking"}
         </button>
       </div>
     </div>
@@ -289,56 +399,19 @@ export default function App() {
   const renderSearching = () => (
     <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
       <div className="booking-card" style={{ textAlign: 'center', maxWidth: '400px', width: '100%' }}>
-        {searchPhase === 'searching' && (
+        {searchStatus === 'searching' ? (
           <>
             <div className="loading-spinner"></div>
             <h2 style={{marginTop: '24px'}}>AI Dispatch Active</h2>
             <p>Locating the nearest verified {selectedService}...</p>
+            <p style={{fontSize: '12px', color: '#64748b', marginTop: '10px'}}>(Check your Expo app to accept the job!)</p>
           </>
-        )}
-        {searchPhase === 'assigned' && (
-          <>
-            <div className="loading-spinner" style={{ borderColor: '#f97316', borderTopColor: 'transparent' }}></div>
-            <h2 style={{marginTop: '24px'}}>Worker Assigned!</h2>
-            <p>You have been assigned to <strong>{assignedWorkerName}</strong>.</p>
-            <p style={{color: '#64748b'}}>Waiting for their response...</p>
-          </>
-        )}
-        {searchPhase === 'accepted' && (
+        ) : (
           <>
             <div className="success-checkmark">✅</div>
-            <h2 style={{marginTop: '24px'}}>Job Accepted!</h2>
-            <p>{assignedWorkerName} is on the way. Loading live tracking...</p>
+            <h2 style={{marginTop: '24px'}}>Worker Assigned!</h2>
+            <p>Worker has accepted your request. Loading live tracking...</p>
           </>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderWorkerDashboard = () => (
-    <div className="booking-page-container fade-in">
-      <div className="booking-card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <h2>👷 Worker Dashboard</h2>
-        <p>Welcome back, {authUser?.name}. Here are your pending job requests:</p>
-        
-        {pendingJobs.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f1f5f9', borderRadius: '8px', marginTop: '20px' }}>
-            <p>No new jobs right now. Searching...</p>
-            <div className="loading-spinner" style={{ width: '30px', height: '30px', margin: '10px auto' }}></div>
-          </div>
-        ) : (
-          pendingJobs.map(job => (
-            <div key={job.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ margin: '0 0 8px 0' }}>🚨 New Job Request</h4>
-                <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>Location: {job.address_text || 'Customer Location'}</p>
-                {job.is_emergency === 1 && <span style={{ color: 'red', fontSize: '12px', fontWeight: 'bold' }}>EMERGENCY OVERRIDE</span>}
-              </div>
-              <button onClick={() => acceptJob(job.id)} className="confirm-btn btn-orange" style={{ width: 'auto', padding: '10px 20px', marginTop: 0 }}>
-                Accept Job
-              </button>
-            </div>
-          ))
         )}
       </div>
     </div>
@@ -347,19 +420,188 @@ export default function App() {
   const renderTracking = () => (
     <div className="tracking-page-container fade-in">
       <button className="back-btn" onClick={() => setCurrentView('home')}>← Cancel & Return Home</button>
+      
       <div className="tracking-grid">
         <div className="tracking-left">
-          <div className="status-banner banner-green">
-            <h3>✅ Worker is on the way!</h3>
+          <div className={`status-banner ${isEmergency ? 'banner-red' : 'banner-green'}`}>
+            <h3>{isEmergency ? "🚨 Emergency Worker Dispatched!" : "✅ Booking Confirmed!"}</h3>
+            <p>{isEmergency ? "Worker is arriving rapidly." : "Worker is on the way."}</p>
           </div>
-          <div className="map-container" style={{ height: '350px', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+          
+          <div className="map-container" style={{ height: '350px', width: '100%', borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', marginBottom: '20px', zIndex: 1 }}>
             <MapContainer center={[20.3055, 85.8147]} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Polyline positions={routeCoords} color="#3b82f6" weight={5} dashArray="8, 10" />
-              <Marker position={workerPos} icon={activeWorkerIcon}><Popup>Assigned Worker</Popup></Marker>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap'
+              />
+              
+              <Polyline positions={routeCoords} color="#3b82f6" weight={5} dashArray="8, 10" opacity={0.7} />
+
+              <Marker position={customerGPS} icon={customerIcon}>
+                <Popup>Your Location</Popup>
+              </Marker>
+
+              <Marker position={workerPos} icon={activeWorkerIcon}>
+                <Popup>Assigned Worker</Popup>
+              </Marker>
+
+              {availableWorkers.map((pos, idx) => (
+                <Marker key={idx} position={pos} icon={idleWorkerIcon}>
+                  <Popup>Available Worker</Popup>
+                </Marker>
+              ))}
             </MapContainer>
           </div>
+
+          <div className="worker-profile-card">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="Worker" className="worker-avatar" />
+            <div className="worker-details">
+              <h4>Verified Worker</h4>
+              <p className="capitalize">⭐ 4.9 (120 Jobs) • Verified {selectedService}</p>
+              <span className="coop-badge">Cooperative Member (100% Payout)</span>
+            </div>
+          </div>
         </div>
+
+        <div className="tracking-right">
+          <div className="chat-interface">
+            <div className="chat-header-small">Live Chat with Worker</div>
+            <div className="chat-body">
+              <div className="chat-msg system-msg">System: Found {availableWorkers.length + 1} nearby workers. AI Matched you with a worker based on real-time location.</div>
+              {isEmergency && <div className="chat-msg system-msg-red">System: EMERGENCY OVERRIDE. Worker is dropping current tasks to reach you.</div>}
+              <div className="chat-msg worker-msg">
+                <strong>Worker:</strong> Hello! I have received your request for a {selectedService}. {isEmergency ? "I am on my way, reaching shortly!" : "I will reach your location at the booked time."}
+              </div>
+            </div>
+            <div className="chat-input-area">
+              <input type="text" placeholder="Type a message..." className="chat-input-box" />
+              <button className="chat-send-btn">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWorkerRegister = () => (
+    <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center' }}>
+      <div className="booking-card" style={{ maxWidth: '480px', width: '100%' }}>
+        <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
+
+        {(regStep === 1 || regStep === 2) && (
+          <div className="reg-step-indicator">
+            <span className={regStep === 1 ? 'reg-step-active' : 'reg-step-done'}>1. Account</span>
+            <span className="reg-step-divider">—</span>
+            <span className={regStep === 2 ? 'reg-step-active' : ''}>2. Worker Profile</span>
+          </div>
+        )}
+
+        {regStep === 1 && (
+          <form onSubmit={handleAccountStep}>
+            <h2>Become a Worker</h2>
+            <p>Join through your local labour cooperative. Step 1 of 2: create your account.</p>
+
+            <div className="form-group">
+              <label>Full Name</label>
+              <input className="form-input" value={workerForm.name} onChange={(e) => updateWorkerForm('name', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input className="form-input" value={workerForm.phone} onChange={(e) => updateWorkerForm('phone', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input type="password" className="form-input" value={workerForm.password} onChange={(e) => updateWorkerForm('password', e.target.value)} />
+            </div>
+
+            {regError && <p className="reg-error">{regError}</p>}
+            <button type="submit" className="confirm-btn btn-orange" disabled={regLoading}>
+              {regLoading ? 'Creating account…' : 'Continue'}
+            </button>
+          </form>
+        )}
+
+        {regStep === 2 && (
+          <form onSubmit={handleProfileStep}>
+            <h2>Worker Profile</h2>
+            <p>Step 2 of 2: your trade details. Your application goes to your cooperative society for verification.</p>
+
+            <div className="form-group">
+              <label>Service Category</label>
+              <select className="form-input capitalize" value={workerForm.category_id} onChange={(e) => updateWorkerForm('category_id', e.target.value)}>
+                <option value="">Select a category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Cooperative Society</label>
+              <select className="form-input" value={workerForm.society_id} onChange={(e) => updateWorkerForm('society_id', e.target.value)}>
+                <option value="">Select your society</option>
+                {societies.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} — {s.city}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Years of Experience</label>
+                <input type="number" className="form-input" value={workerForm.experience_years} onChange={(e) => updateWorkerForm('experience_years', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>e-Shram UAN (optional)</label>
+                <input className="form-input" placeholder="12-digit number" value={workerForm.eshram_uan} onChange={(e) => updateWorkerForm('eshram_uan', e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Short Bio</label>
+              <input className="form-input" placeholder="e.g. 5 years residential wiring experience" value={workerForm.bio} onChange={(e) => updateWorkerForm('bio', e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>ID last 4 digits (optional — never share your full ID number)</label>
+              <input className="form-input" maxLength={4} placeholder="e.g. 4321" value={workerForm.id_last4} onChange={(e) => updateWorkerForm('id_last4', e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label>Upload a certificate or ID photo (optional)</label>
+              <input type="file" accept="image/*" onChange={handleCertificateFile} />
+              {certificatePhoto && <img src={certificatePhoto.previewUrl} alt="Certificate preview" className="reg-photo-preview" />}
+            </div>
+
+            <p className="reg-disclaimer">
+              We don't verify your e-Shram UAN against a live government database — it's recorded as
+              provided and your cooperative society will verify your details directly.
+            </p>
+
+            {regError && <p className="reg-error">{regError}</p>}
+            <button type="submit" className="confirm-btn btn-orange" disabled={regLoading}>
+              {regLoading ? 'Submitting…' : 'Submit Application'}
+            </button>
+          </form>
+        )}
+
+        {regStep === 'verifying' && (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ marginTop: '20px', color: '#64748b', fontSize: '14px' }}>{verifyMessage}</p>
+          </div>
+        )}
+
+        {regStep === 3 && (
+          <div style={{ textAlign: 'center' }}>
+            <div className="success-checkmark">✅</div>
+            <h2 style={{ marginTop: '24px' }}>Application Submitted!</h2>
+            <p>Your cooperative society will review your details and verify your profile. You'll be able to log in and start accepting jobs once approved.</p>
+            <button className="confirm-btn btn-orange" style={{ marginTop: '20px' }} onClick={() => setCurrentView('home')}>
+              Back to Home
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -371,48 +613,19 @@ export default function App() {
           <span style={{color: '#f97316'}}>⚡</span> Kushal-Setu
         </div>
         <nav className="topnav">
-          {authUser ? (
-            <>
-              <span style={{ marginRight: '15px', color: '#64748b' }}>Hi, {authUser.name}</span>
-              {authUser.role === 'worker' && <button className="nav-btn-orange" onClick={() => setCurrentView('worker-dashboard')} style={{ marginRight: '10px', background: 'transparent', color: '#f97316', border: '1px solid #f97316' }}>Dashboard</button>}
-              <button className="nav-btn-orange bubble-effect" onClick={handleLogout}>Logout</button>
-            </>
-          ) : (
-            <button className="nav-btn-orange bubble-effect" onClick={() => setShowLoginModal(true)}>Log In</button>
-          )}
+          <a href="#services" onClick={() => setCurrentView('home')}>Services ▾</a>
+          <a href="#become-worker" onClick={() => { setRegStep(1); setCurrentView('register-worker'); }}>Become a Worker</a>
+          <button className="nav-btn-orange bubble-effect" onClick={() => setCurrentView('booking')}>Post a Request</button>
         </nav>
       </header>
 
-      {/* LOGIN MODAL */}
-      {showLoginModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '400px' }}>
-            <h2 style={{ marginTop: 0 }}>Log In</h2>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <button onClick={() => setLoginTab('customer')} style={{ flex: 1, padding: '10px', background: loginTab === 'customer' ? '#f97316' : '#e2e8f0', color: loginTab === 'customer' ? '#fff' : '#000', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Customer</button>
-              <button onClick={() => setLoginTab('worker')} style={{ flex: 1, padding: '10px', background: loginTab === 'worker' ? '#f97316' : '#e2e8f0', color: loginTab === 'worker' ? '#fff' : '#000', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Worker</button>
-            </div>
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label>Phone Number</label>
-                <input className="form-input" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <input type="password" className="form-input" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
-              </div>
-              <button type="submit" className="confirm-btn btn-orange">Login as {loginTab === 'customer' ? 'Customer' : 'Worker'}</button>
-              <button type="button" style={{ width: '100%', padding: '12px', marginTop: '10px', background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }} onClick={() => setShowLoginModal(false)}>Cancel</button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ALL FAKE POPUP CODE IS COMPLETELY DELETED HERE */}
 
       {currentView === 'home' && renderHome()}
       {currentView === 'booking' && renderBooking()}
       {currentView === 'searching' && renderSearching()}
       {currentView === 'tracking' && renderTracking()}
-      {currentView === 'worker-dashboard' && renderWorkerDashboard()}
+      {currentView === 'register-worker' && renderWorkerRegister()}
       
       {currentView === 'home' && (
         <footer className="dark-footer">
