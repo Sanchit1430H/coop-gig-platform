@@ -159,4 +159,44 @@ CREATE INDEX IF NOT EXISTS idx_workers_category_avail ON workers(category_id, is
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 `);
 
+// ---------------------------------------------------------------------------
+// MIGRATION: AI pre-diagnosis fields on bookings.
+// Written as a safe "add column if missing" check (not baked into the
+// CREATE TABLE above) because CREATE TABLE IF NOT EXISTS does nothing on a
+// database that already has the bookings table — like your already-deployed
+// Render database. This runs every startup, is a no-op once the columns
+// exist, and works the same whether the DB is brand new or already live.
+// ---------------------------------------------------------------------------
+const bookingColumns = db.prepare(`PRAGMA table_info(bookings)`).all().map((c) => c.name);
+const addColumnIfMissing = (name, definition) => {
+  if (!bookingColumns.includes(name)) {
+    db.exec(`ALTER TABLE bookings ADD COLUMN ${name} ${definition}`);
+  }
+};
+addColumnIfMissing('issue_description', 'TEXT');
+addColumnIfMissing('issue_photo_base64', 'TEXT');       // demo-scale only, see routes/diagnosis.js
+addColumnIfMissing('ai_prediagnosis', 'TEXT');
+addColumnIfMissing('ai_diagnosis_method', "TEXT DEFAULT 'not_run'");
+
+// ---------------------------------------------------------------------------
+// MIGRATION: worker self-service registration fields.
+// - eshram_uan: SELF-DECLARED 12-digit e-Shram UAN, not verified against a
+//   live government API (no public API exists for that — see routes/workers.js).
+// - id_last4: last 4 digits only of a government ID, if the worker chooses
+//   to provide one. NEVER store a full Aadhaar/ID number — see the comment
+//   in routes/workers.js for why.
+// - certificate_photo_base64: demo-scale storage, same caveat as
+//   issue_photo_base64 on bookings — real deployment should use object
+//   storage (S3/Cloudinary) and store a URL instead.
+// ---------------------------------------------------------------------------
+const workerColumns = db.prepare(`PRAGMA table_info(workers)`).all().map((c) => c.name);
+const addWorkerColumnIfMissing = (name, definition) => {
+  if (!workerColumns.includes(name)) {
+    db.exec(`ALTER TABLE workers ADD COLUMN ${name} ${definition}`);
+  }
+};
+addWorkerColumnIfMissing('eshram_uan', 'TEXT');
+addWorkerColumnIfMissing('id_last4', 'TEXT');
+addWorkerColumnIfMissing('certificate_photo_base64', 'TEXT');
+
 module.exports = db;

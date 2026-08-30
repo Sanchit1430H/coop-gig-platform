@@ -10,6 +10,9 @@ const ratingRoutes = require('./routes/ratings');
 const adminRoutes = require('./routes/admin');
 const disputeRoutes = require('./routes/disputes');
 const walletRoutes = require('./routes/wallet');
+const publicRoutes = require('./routes/public');
+const systemRoutes = require('./routes/system');
+const diagnosisRoutes = require('./routes/diagnosis');
 
 const app = express();
 app.use(cors());
@@ -25,6 +28,9 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/system', systemRoutes);
+app.use('/api/bookings', diagnosisRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'not found' }));
 // eslint-disable-next-line no-unused-vars

@@ -1,12 +1,18 @@
-console.log("Starting seed script on Render...");
 /**
  * Seed script — populates the DB with realistic demo data so the app
  * doesn't look empty during development or in front of judges.
  * Run with: node src/seed.js
  * Safe to re-run: wipes and recreates all tables first.
+ *
+ * Exported as runSeed() so it can also be triggered remotely via the
+ * protected POST /api/system/seed endpoint (routes/system.js) — useful for
+ * seeding a deployed database (e.g. on Render) where you may not have easy
+ * shell access to run `node src/seed.js` directly on the server.
  */
 const bcrypt = require('bcryptjs');
-const db = require('./db');
+const db = require('./db'); // shared connection — same one the running server uses
+
+function runSeed() {
 db.pragma('foreign_keys = OFF');
 
 // Wipe existing data
@@ -40,6 +46,17 @@ const fedAdminId = db.prepare(
 // --- Workers: spread across Cuttack area with real-ish lat/lng jitter ---
 const CUTTACK_CENTER = { lat: 20.4625, lng: 85.8830 };
 const BBSR_CENTER = { lat: 20.2961, lng: 85.8245 };
+
+const REVIEW_COMMENTS = [
+  'Fixed the issue quickly and explained what went wrong.',
+  'Arrived on time and was very professional throughout.',
+  'Reasonably priced and the work was solid.',
+  'Great communication, kept me updated the whole time.',
+  'Would book again, no complaints at all.',
+  'Very courteous and cleaned up after the job.',
+  'Efficient work, done faster than I expected.',
+  'Polite and clearly experienced in the trade.',
+];
 
 const workerNames = [
   'Ramesh Sahoo', 'Sunita Behera', 'Ajay Nayak', 'Kiran Patra', 'Manoj Das',
@@ -139,7 +156,7 @@ for (let d = 6; d >= 0; d--) {
     if (Math.random() > 0.3) {
       db.prepare(
         `INSERT INTO ratings (booking_id, worker_id, customer_id, stars, comment, created_at) VALUES (?, ?, ?, ?, ?, ?)`
-      ).run(bookingId, worker.id, customerId, 3 + Math.floor(Math.random() * 3), 'Good service', createdAt);
+      ).run(bookingId, worker.id, customerId, 3 + Math.floor(Math.random() * 3), REVIEW_COMMENTS[Math.floor(Math.random() * REVIEW_COMMENTS.length)], createdAt);
     }
     bookingCount++;
   }
@@ -155,6 +172,17 @@ for (const w of verifiedWorkers) {
   db.prepare('UPDATE workers SET wallet_balance = ? WHERE id = ?').run(walletAgg.total, w.id);
 }
 
+const summary = {
+  federations: 1,
+  societies: 2,
+  categories: categories.length,
+  workers: workerNames.length,
+  verified_workers: verifiedWorkers.length,
+  pending_workers: workerNames.length - verifiedWorkers.length,
+  customers: customerNames.length,
+  historical_bookings: bookingCount,
+};
+
 console.log(`Seed complete:
   1 federation, 2 societies, ${categories.length} categories
   ${workerNames.length} workers (${verifiedWorkers.length} verified, ${workerNames.length - verifiedWorkers.length} pending)
@@ -165,3 +193,13 @@ Login as federation admin: phone 9000000001 / pass123
 Login as any worker: phone 91111111{10-24} / pass123
 Login as any customer: phone 92222222{10-13} / pass123
 `);
+
+return summary;
+} // end runSeed()
+
+module.exports = { runSeed };
+
+// CLI usage: `node src/seed.js` still works exactly as before.
+if (require.main === module) {
+  runSeed();
+}

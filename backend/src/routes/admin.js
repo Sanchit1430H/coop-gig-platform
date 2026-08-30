@@ -37,7 +37,7 @@ router.get('/dashboard', requireAuth, requireRole('society_admin', 'federation_a
   const pending_verifications = db.prepare(`SELECT COUNT(*) as n FROM workers WHERE verification_status = 'pending'`).get().n;
   const active_bookings = db.prepare(`SELECT COUNT(*) as n FROM bookings WHERE status IN ('matched','accepted','in_progress')`).get().n;
   const completed_bookings = db.prepare(`SELECT COUNT(*) as n FROM bookings WHERE status = 'completed'`).get().n;
-  const revenue = db.prepare(`SELECT COALESCE(SUM(customer_total),0) as gross, COALESCE(SUM(platform_fee),0) as commission FROM payments WHERE status = 'paid'`).get();
+  const revenue = db.prepare(`SELECT COALESCE(SUM(customer_total),0) as gross, COALESCE(SUM(platform_fee),0) as commission, COALESCE(SUM(wallet_contribution),0) as wallet_total FROM payments WHERE status = 'paid'`).get();
   const insured_workers = db.prepare(`SELECT COUNT(*) as n FROM workers WHERE insurance_enrolled = 1`).get().n;
   const total_verified_workers = db.prepare(`SELECT COUNT(*) as n FROM workers WHERE verification_status = 'verified'`).get().n;
 
@@ -47,6 +47,7 @@ router.get('/dashboard', requireAuth, requireRole('society_admin', 'federation_a
     completed_bookings,
     gross_revenue: revenue.gross,
     cooperative_commission: revenue.commission,
+    total_wallet_contributions: revenue.wallet_total,
     insured_workers,
     total_verified_workers,
   });
