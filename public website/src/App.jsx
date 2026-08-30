@@ -515,24 +515,45 @@ export default function App() {
     </>
   );
 
-  const renderCustomerLogin = () => (
-    <div className="booking-page-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-      <div className="booking-card" style={{ maxWidth: '400px', width: '100%' }}>
-        <button className="back-btn" onClick={() => setCurrentView('home')}>← Back to Home</button>
-        <h2>Customer Login</h2>
-        <p>Please log in to your account to book a service.</p>
+const renderCustomerLogin = () => (
+    <div className="booking-page-container fade-in" style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      minHeight: 'calc(100vh - 70px)', 
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      padding: '40px 20px'
+    }}>
+      <div className="booking-card bubble-effect" style={{ 
+        maxWidth: '420px', 
+        width: '100%', 
+        padding: '40px 30px', 
+        borderRadius: '24px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        border: '1px solid #ffffff',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      }}>
+        <button className="back-btn" onClick={() => setCurrentView('home')} style={{marginBottom: '20px'}}>← Back to Home</button>
+        
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '12px' }}>👋</div>
+          <h2 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '28px', fontWeight: '800' }}>Welcome Back</h2>
+          <p style={{ color: '#64748b', margin: 0, fontSize: '15px' }}>Log in to quickly book trusted professionals.</p>
+        </div>
         
         <form onSubmit={handleCustomerLoginSubmit}>
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input className="form-input" placeholder="e.g. 9222222210" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} required />
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{ fontWeight: '600', color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Phone Number</label>
+            <input className="form-input" placeholder="e.g. 9222222210" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} required style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', width: '100%', boxSizing: 'border-box' }} />
           </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" className="form-input" placeholder="Enter password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+          <div className="form-group" style={{ marginBottom: '30px' }}>
+            <label style={{ fontWeight: '600', color: '#334155', fontSize: '14px', marginBottom: '8px', display: 'block' }}>Password</label>
+            <input type="password" className="form-input" placeholder="Enter your password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required style={{ padding: '14px', borderRadius: '12px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', width: '100%', boxSizing: 'border-box' }} />
           </div>
-          {loginError && <p className="reg-error">{loginError}</p>}
-          <button type="submit" className="confirm-btn btn-orange">Log In & Continue</button>
+          {loginError && <p className="reg-error" style={{ textAlign: 'center', marginBottom: '20px' }}>{loginError}</p>}
+          <button type="submit" className="confirm-btn btn-orange" style={{ width: '100%', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', boxShadow: '0 4px 14px 0 rgba(249, 115, 22, 0.39)' }}>
+            Log In & Continue
+          </button>
         </form>
       </div>
     </div>
