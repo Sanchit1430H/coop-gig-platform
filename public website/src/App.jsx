@@ -128,6 +128,7 @@ export default function App() {
     }, 900);
   }
 
+  // --- FIXED WORKER REGISTRATION (Uses fetch directly) ---
   async function handleAccountStep(e) {
     e.preventDefault();
     setRegError('');
@@ -137,9 +138,23 @@ export default function App() {
     }
     setRegLoading(true);
     try {
-      const data = await api.register({
-        name: workerForm.name, phone: workerForm.phone, password: workerForm.password, role: 'worker',
+      const res = await fetch('https://seva-api-1uco.onrender.com/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: workerForm.name,
+          phone: workerForm.phone,
+          password: workerForm.password,
+          role: 'worker'
+        })
       });
+      
+      const data = await res.json();
+      
+      if (!data.token) {
+        throw new Error(data.error || 'Registration failed. Try a different phone number.');
+      }
+
       sessionStorage.setItem('worker_reg_token', data.token);
       await loadCategoriesAndSocieties(data.token);
       setRegStep(2);
@@ -233,7 +248,7 @@ export default function App() {
       
       if (data.token) {
         setCustomerToken(data.token);
-        setCurrentView('booking'); // Successfully logged in -> Move to Booking Form
+        setCurrentView('booking'); 
       } else {
         setLoginError(data.error || 'Login failed. Check your credentials.');
       }
@@ -268,7 +283,6 @@ export default function App() {
     const actualCategoryId = categoryMap[selectedService] || 1;
 
     try {
-      // 1. Send the booking to the LIVE backend
       const res = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
         method: 'POST',
         headers: { 
@@ -291,7 +305,6 @@ export default function App() {
         return;
       }
 
-      // 2. Poll the server waiting for EXPO GO to accept
       const checkInterval = setInterval(async () => {
         const statusRes = await fetch('https://seva-api-1uco.onrender.com/api/bookings', {
           headers: { 'Authorization': `Bearer ${customerToken}` }
@@ -300,18 +313,16 @@ export default function App() {
         const currentBooking = bookings.find(b => b.id === newBooking.id);
         
         if (currentBooking) {
-          // Worker hit accept on Expo App!
           if (currentBooking.status === 'accepted' || currentBooking.status === 'in_progress') {
             clearInterval(checkInterval); 
             
-            // Try to extract the assigned worker's name/details if the backend provides it
             if (currentBooking.worker) {
                setAssignedWorker(currentBooking.worker);
             }
             
             setSearchStatus('found');     
             setTimeout(() => {
-              setCurrentView('tracking'); // Move to dispatch page
+              setCurrentView('tracking'); 
             }, 1500);
           }
         }
