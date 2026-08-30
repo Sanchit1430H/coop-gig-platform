@@ -493,20 +493,61 @@ export default function App() {
         </div>
       </section>
 
-      {/* --- NEW: THE IMPACT SECTION --- */}
-      <section style={{ padding: '60px 20px', backgroundColor: '#f8fafc', textAlign: 'center' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '32px', color: '#0f172a', marginBottom: '20px' }}>Formalizing India’s Unorganized Sector</h2>
-          <p style={{ fontSize: '18px', color: '#475569', lineHeight: '1.8', marginBottom: '40px' }}>
-            There are over 280 million unorganized workers in India. Kushal-Setu is not just a booking platform; it is a socio-economic movement. By removing predatory commissions and digitizing local trade skills, we are building a fairer, more transparent gig economy for the future of India.
+      {/* --- REDESIGNED PREMIUM IMPACT SECTION --- */}
+      <section style={{ padding: '80px 20px', backgroundColor: '#ffffff', textAlign: 'center', borderTop: '1px solid #f8fafc', borderBottom: '1px solid #f8fafc' }}>
+        <div style={{ maxWidth: '840px', margin: '0 auto' }}>
+          
+          {/* Subtle Orange Accent Line */}
+          <div style={{ width: '48px', height: '4px', backgroundColor: '#f97316', margin: '0 auto 24px', borderRadius: '2px' }}></div>
+          
+          <h2 style={{ fontSize: '36px', color: '#0f172a', marginBottom: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+            Formalizing India’s Unorganized Sector
+          </h2>
+          
+          <p style={{ fontSize: '19px', color: '#475569', lineHeight: '1.8', marginBottom: '56px', fontWeight: '400' }}>
+            There are over <strong>280 million unorganized workers</strong> in India. Kushal-Setu is not just a booking platform; it is a socio-economic movement. By removing predatory commissions and digitizing local trade skills, we are building a fairer, more transparent gig economy for the future of India.
           </p>
-          <div style={{ padding: '40px', backgroundColor: '#0f172a', borderRadius: '16px', color: 'white' }}>
-            <h3 style={{ fontSize: '24px', marginBottom: '15px' }}>Ready to experience the future of home services?</h3>
-            <p style={{ color: '#94a3b8', marginBottom: '25px' }}>Support fair trade. Get your household tasks done securely and efficiently today.</p>
-            <button className="confirm-btn btn-orange" style={{ maxWidth: '300px', margin: '0 auto' }} onClick={() => customerToken ? setCurrentView('booking') : setCurrentView('customer-login')}>Find Your Expert Now</button>
+          
+          {/* Elevated Premium CTA Card */}
+          <div className="bubble-effect" style={{ 
+            padding: '56px 40px', 
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
+            borderRadius: '24px', 
+            color: 'white',
+            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Minimalist Decorative Glow */}
+            <div style={{ position: 'absolute', top: '-50%', left: '-10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(249,115,22,0.15) 0%, rgba(255,255,255,0) 70%)', borderRadius: '50%' }}></div>
+            
+            <h3 style={{ fontSize: '28px', marginBottom: '16px', fontWeight: '700', position: 'relative', zIndex: 1 }}>
+              Ready to experience the future of home services?
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '16px', maxWidth: '500px', margin: '0 auto 32px', position: 'relative', zIndex: 1 }}>
+              Support fair trade. Get your household tasks done securely and efficiently today.
+            </p>
+            <button 
+              className="confirm-btn btn-orange" 
+              style={{ 
+                maxWidth: '280px', 
+                margin: '0 auto', 
+                position: 'relative', 
+                zIndex: 1, 
+                padding: '16px 24px', 
+                fontSize: '16px', 
+                fontWeight: 'bold',
+                borderRadius: '12px',
+                boxShadow: '0 4px 14px 0 rgba(249, 115, 22, 0.4)'
+              }} 
+              onClick={() => customerToken ? setCurrentView('booking') : setCurrentView('customer-login')}
+            >
+              Find Your Expert Now
+            </button>
           </div>
         </div>
       </section>
+      {/* --- END PREMIUM IMPACT SECTION --- */}
 
       <section className="testimonials-section">
         <h2>What Our Customers Say</h2>
@@ -515,7 +556,7 @@ export default function App() {
     </>
   );
 
-const renderCustomerLogin = () => (
+  const renderCustomerLogin = () => (
     <div className="booking-page-container fade-in" style={{ 
       display: 'flex', 
       justifyContent: 'center', 
