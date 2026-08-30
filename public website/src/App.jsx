@@ -197,15 +197,32 @@ export default function App() {
     setRegLoading(true);
     try {
       const token = sessionStorage.getItem('worker_reg_token');
-      await api.createWorkerProfile(token, {
-        category_id: parseInt(workerForm.category_id, 10),
-        society_id: parseInt(workerForm.society_id, 10),
-        experience_years: workerForm.experience_years ? parseFloat(workerForm.experience_years) : 0,
-        bio: workerForm.bio || undefined,
-        eshram_uan: workerForm.eshram_uan || undefined,
-        id_last4: workerForm.id_last4 || undefined,
-        certificate_photo_base64: certificatePhoto?.base64,
+      
+      // --- THE FIX: Direct fetch instead of using the broken api helper ---
+      const res = await fetch('https://seva-api-1uco.onrender.com/api/workers/profile', {
+        method: 'POST', 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          category_id: parseInt(workerForm.category_id, 10),
+          society_id: parseInt(workerForm.society_id, 10),
+          experience_years: workerForm.experience_years ? parseFloat(workerForm.experience_years) : 0,
+          bio: workerForm.bio || undefined,
+          eshram_uan: workerForm.eshram_uan || undefined,
+          id_last4: workerForm.id_last4 || undefined,
+          certificate_photo_base64: certificatePhoto?.base64,
+        })
       });
+      
+      const data = await res.json();
+      
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to submit worker profile.');
+      }
+      // -------------------------------------------------------------------
+
       sessionStorage.removeItem('worker_reg_token');
       runVerificationAnimation(() => setRegStep(3));
     } catch (err) {
