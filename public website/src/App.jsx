@@ -199,7 +199,7 @@ export default function App() {
       const token = sessionStorage.getItem('worker_reg_token');
       
       // --- THE FIX: Direct fetch instead of using the broken api helper ---
-      const res = await fetch('https://seva-api-1uco.onrender.com/api/workers/profile', {
+      const res = await fetch('https://seva-api-1uco.onrender.com/api/workers', {
         method: 'POST', 
         headers: { 
           'Content-Type': 'application/json',
