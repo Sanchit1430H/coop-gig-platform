@@ -520,9 +520,13 @@ const renderCustomerLogin = () => (
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center', 
-      minHeight: 'calc(100vh - 70px)', 
+      minHeight: 'calc(100vh - 70px)',
+      width: '100%',             /* <-- THIS FIXES THE NARROW COLUMN */
+      maxWidth: '100%',          /* <-- THIS FIXES THE NARROW COLUMN */
+      margin: '0',
       background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-      padding: '40px 20px'
+      padding: '40px 20px',
+      boxSizing: 'border-box'
     }}>
       <div className="booking-card bubble-effect" style={{ 
         maxWidth: '420px', 
